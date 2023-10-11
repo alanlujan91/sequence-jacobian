@@ -1,7 +1,13 @@
 import numpy as np
-from sequence_jacobian.blocks.support.het_support import (Transition,
-    PolicyLottery1D, PolicyLottery2D, Markov, CombinedTransition,
-    lottery_1d, lottery_2d)
+from sequence_jacobian.blocks.support.het_support import (
+    Transition,
+    PolicyLottery1D,
+    PolicyLottery2D,
+    Markov,
+    CombinedTransition,
+    lottery_1d,
+    lottery_2d,
+)
 from sequence_jacobian.utilities.multidim import batch_multiply_ith_dimension
 
 
@@ -35,13 +41,21 @@ def test_many_markov_shock():
         D = np.random.rand(*shape)
         Pis = [np.random.rand(s, s) for s in shape[:2]]
         dPis = [np.random.rand(s, s) for s in shape[:2]]
-        
-        h = 1E-4
-        Dout_up = CombinedTransition([Markov(Pi + h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]).forward(D)
-        Dout_dn = CombinedTransition([Markov(Pi - h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]).forward(D)
-        Dder = (Dout_up - Dout_dn) / (2*h)
 
-        Dder2 = CombinedTransition([Markov(Pi, i) for i, Pi in enumerate(Pis)]).forward_shockable(D).forward_shock(dPis)
+        h = 1e-4
+        Dout_up = CombinedTransition(
+            [Markov(Pi + h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
+        ).forward(D)
+        Dout_dn = CombinedTransition(
+            [Markov(Pi - h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
+        ).forward(D)
+        Dder = (Dout_up - Dout_dn) / (2 * h)
+
+        Dder2 = (
+            CombinedTransition([Markov(Pi, i) for i, Pi in enumerate(Pis)])
+            .forward_shockable(D)
+            .forward_shock(dPis)
+        )
 
         assert np.allclose(Dder, Dder2)
 
@@ -51,23 +65,27 @@ def test_policy_shock():
     grid = np.geomspace(0.5, 10, shape[-1])
     np.random.seed(98765)
 
-    a = (np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis] 
+    a = (
+        np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis]
         + np.linspace(0, 1, shape[1])[:, np.newaxis]
-        + 0.001*grid**2 + 0.9*grid + 0.5)
+        + 0.001 * grid**2
+        + 0.9 * grid
+        + 0.5
+    )
 
     for _ in range(10):
         D = np.random.rand(*shape)
 
         da = np.random.rand(*shape)
-        h = 1E-5
-        Dout_up = lottery_1d(a + h*da, grid).forward(D)
-        Dout_dn = lottery_1d(a - h*da, grid).forward(D)
-        Dder = (Dout_up - Dout_dn) / (2*h)
+        h = 1e-5
+        Dout_up = lottery_1d(a + h * da, grid).forward(D)
+        Dout_dn = lottery_1d(a - h * da, grid).forward(D)
+        Dder = (Dout_up - Dout_dn) / (2 * h)
 
         Dder2 = lottery_1d(a, grid).forward_shockable(D).forward_shock(da)
 
-        assert np.allclose(Dder, Dder2, atol=1E-4)
-    
+        assert np.allclose(Dder, Dder2, atol=1e-4)
+
 
 def test_law_of_motion_shock():
     # shock everything in the law of motion, and see if it works!
@@ -75,9 +93,13 @@ def test_law_of_motion_shock():
     grid = np.geomspace(0.5, 10, shape[-1])
     np.random.seed(98765)
 
-    a = (np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis] 
+    a = (
+        np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis]
         + np.linspace(0, 1, shape[1])[:, np.newaxis]
-        + 0.001*grid**2 + 0.9*grid + 0.5)
+        + 0.001 * grid**2
+        + 0.9 * grid
+        + 0.5
+    )
 
     for _ in range(10):
         D = np.random.rand(*shape)
@@ -86,19 +108,27 @@ def test_law_of_motion_shock():
         da = np.random.rand(*shape)
         dPis = [np.random.rand(s, s) for s in shape[:2]]
 
-        h = 1E-5
-        policy_up = lottery_1d(a + h*da, grid)
-        policy_dn = lottery_1d(a - h*da, grid)
-        markovs_up = [Markov(Pi + h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
-        markovs_dn =[Markov(Pi - h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
+        h = 1e-5
+        policy_up = lottery_1d(a + h * da, grid)
+        policy_dn = lottery_1d(a - h * da, grid)
+        markovs_up = [
+            Markov(Pi + h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))
+        ]
+        markovs_dn = [
+            Markov(Pi - h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))
+        ]
         Dout_up = CombinedTransition([policy_up, *markovs_up]).forward(D)
         Dout_dn = CombinedTransition([policy_dn, *markovs_dn]).forward(D)
-        Dder = (Dout_up - Dout_dn) / (2*h)
+        Dder = (Dout_up - Dout_dn) / (2 * h)
 
         markovs = [Markov(Pi, i) for i, Pi, in enumerate(Pis)]
-        Dder2 = CombinedTransition([lottery_1d(a, grid), *markovs]).forward_shockable(D).forward_shock([da, *dPis])
+        Dder2 = (
+            CombinedTransition([lottery_1d(a, grid), *markovs])
+            .forward_shockable(D)
+            .forward_shock([da, *dPis])
+        )
 
-        assert np.allclose(Dder, Dder2, atol=1E-4)
+        assert np.allclose(Dder, Dder2, atol=1e-4)
 
 
 def test_2d_policy_shock():
@@ -107,8 +137,8 @@ def test_2d_policy_shock():
     b_grid = np.geomspace(0.2, 8, shape[-1])
     np.random.seed(98765)
 
-    a = (0.001*a_grid**2 + 0.9*a_grid + 0.5)[:, np.newaxis]
-    b = (-0.001*b_grid**2 + 0.9*b_grid + 0.5)
+    a = (0.001 * a_grid**2 + 0.9 * a_grid + 0.5)[:, np.newaxis]
+    b = -0.001 * b_grid**2 + 0.9 * b_grid + 0.5
 
     a = np.broadcast_to(a, shape)
     b = np.broadcast_to(b, shape)
@@ -121,22 +151,30 @@ def test_2d_policy_shock():
         db = np.random.rand(*shape)
         dPis = [np.random.rand(s, s) for s in shape[:2]]
 
-        h = 1E-5
+        h = 1e-5
 
-        policy_up = lottery_2d(a + h*da, b + h*db, a_grid, b_grid)
-        policy_dn = lottery_2d(a - h*da, b - h*db, a_grid, b_grid)
-        markovs_up = [Markov(Pi + h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
-        markovs_dn = [Markov(Pi - h*dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))]
+        policy_up = lottery_2d(a + h * da, b + h * db, a_grid, b_grid)
+        policy_dn = lottery_2d(a - h * da, b - h * db, a_grid, b_grid)
+        markovs_up = [
+            Markov(Pi + h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))
+        ]
+        markovs_dn = [
+            Markov(Pi - h * dPi, i) for i, (Pi, dPi) in enumerate(zip(Pis, dPis))
+        ]
         Dout_up = CombinedTransition([policy_up, *markovs_up]).forward(D)
         Dout_dn = CombinedTransition([policy_dn, *markovs_dn]).forward(D)
-        Dder = (Dout_up - Dout_dn) / (2*h)
+        Dder = (Dout_up - Dout_dn) / (2 * h)
 
         policy = lottery_2d(a, b, a_grid, b_grid)
 
         markovs = [Markov(Pi, i) for i, Pi, in enumerate(Pis)]
-        Dder2 = CombinedTransition([policy, *markovs]).forward_shockable(D).forward_shock([[da, db], *dPis])
+        Dder2 = (
+            CombinedTransition([policy, *markovs])
+            .forward_shockable(D)
+            .forward_shock([[da, db], *dPis])
+        )
 
-        assert np.allclose(Dder, Dder2, atol=1E-4)
+        assert np.allclose(Dder, Dder2, atol=1e-4)
 
 
 def test_forward_expectations_symmetry():
@@ -146,9 +184,13 @@ def test_forward_expectations_symmetry():
     grid = np.geomspace(0.5, 10, shape[-1])
     np.random.seed(1423)
 
-    a = (np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis] 
+    a = (
+        np.full(shape[0], 0.01)[:, np.newaxis, np.newaxis]
         + np.linspace(0, 1, shape[1])[:, np.newaxis]
-        + 0.001*grid**2 + 0.9*grid + 0.5)
+        + 0.001 * grid**2
+        + 0.9 * grid
+        + 0.5
+    )
 
     for _ in range(10):
         D = np.random.rand(*shape)
@@ -174,7 +216,7 @@ def test_forward_expectations_symmetry():
 def test_einsum():
     D = np.random.rand(2, 5, 10)
     P = np.random.rand(3, 2, 5, 10)
-    Dnew = np.einsum('xij,dxij->dij', D, P)
+    Dnew = np.einsum("xij,dxij->dij", D, P)
     assert Dnew[0, 1, 1] == np.sum(P[0, :, 1, 1] * D[:, 1, 1])
 
     # can I generalize this? reshape and then einsum

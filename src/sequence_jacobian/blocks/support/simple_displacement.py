@@ -6,6 +6,7 @@ from warnings import warn
 
 from ...utilities.misc import numeric_primitive
 
+
 def ignore(x):
     if isinstance(x, int):
         return IgnoreInt(x)
@@ -14,7 +15,9 @@ def ignore(x):
     elif isinstance(x, np.ndarray):
         return IgnoreVector(x)
     else:
-        raise TypeError(f"{type(x)} is not supported. Must provide either a float or an nd.array as an argument")
+        raise TypeError(
+            f"{type(x)} is not supported. Must provide either a float or an nd.array as an argument"
+        )
 
 
 class IgnoreInt(int):
@@ -24,7 +27,7 @@ class IgnoreInt(int):
     """
 
     def __repr__(self):
-        return f'IgnoreInt({numeric_primitive(self)})'
+        return f"IgnoreInt({numeric_primitive(self)})"
 
     @property
     def ss(self):
@@ -110,7 +113,7 @@ class IgnoreFloat(float):
     """
 
     def __repr__(self):
-        return f'IgnoreFloat({numeric_primitive(self)})'
+        return f"IgnoreFloat({numeric_primitive(self)})"
 
     @property
     def ss(self):
@@ -191,15 +194,15 @@ class IgnoreFloat(float):
 
 class IgnoreVector(np.ndarray):
     """This class ignores time displacements of a np.ndarray.
-       See NumPy documentation on "Subclassing ndarray" for more details on the use of __new__
-       for this implementation."""
+    See NumPy documentation on "Subclassing ndarray" for more details on the use of __new__
+    for this implementation."""
 
     def __new__(cls, x):
         obj = np.asarray(x).view(cls)
         return obj
 
     def __repr__(self):
-        return f'IgnoreVector({numeric_primitive(self)})'
+        return f"IgnoreVector({numeric_primitive(self)})"
 
     @property
     def ss(self):
@@ -276,7 +279,7 @@ class Displace(np.ndarray):
     """This class makes time displacements of a time path, given the steady-state value.
     Needed for SimpleBlock.td()"""
 
-    def __new__(cls, x, ss=None, ss_initial=None, name='UNKNOWN'):
+    def __new__(cls, x, ss=None, ss_initial=None, name="UNKNOWN"):
         obj = np.asarray(x).view(cls)
         obj.ss = ss
         obj.ss_initial = ss_initial
@@ -290,7 +293,7 @@ class Displace(np.ndarray):
         self.name = getattr(obj, "name", "UNKNOWN")
 
     def __repr__(self):
-        return f'Displace({numeric_primitive(self)})'
+        return f"Displace({numeric_primitive(self)})"
 
     # TODO: Implemented a very preliminary generalization of Displace to higher-dimensional (>1) ndarrays
     #   however the rigorous operator overloading/testing has not been checked for higher dimensions.
@@ -298,7 +301,9 @@ class Displace(np.ndarray):
     def __call__(self, index):
         if index != 0:
             if self.ss is None:
-                raise KeyError(f'Trying to call {self.name}({index}), but steady-state {self.name} not given!')
+                raise KeyError(
+                    f"Trying to call {self.name}({index}), but steady-state {self.name} not given!"
+                )
             newx = np.zeros(np.shape(self))
             if index > 0:
                 newx[:-index] = numeric_primitive(self)[index:]
@@ -311,144 +316,280 @@ class Displace(np.ndarray):
             return self
 
     def apply(self, f, **kwargs):
-        return Displace(f(numeric_primitive(self), **kwargs), ss=f(self.ss, **kwargs), ss_initial=f(self.ss_initial, **kwargs))
+        return Displace(
+            f(numeric_primitive(self), **kwargs),
+            ss=f(self.ss, **kwargs),
+            ss_initial=f(self.ss_initial, **kwargs),
+        )
 
     def __pos__(self):
         return self
 
     def __neg__(self):
-        return Displace(-numeric_primitive(self), ss=-self.ss, ss_initial=-self.ss_initial)
+        return Displace(
+            -numeric_primitive(self), ss=-self.ss, ss_initial=-self.ss_initial
+        )
 
     def __add__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(self) + numeric_primitive(other),
-                            ss=self.ss + other.ss, ss_initial=self.ss_initial + other.ss_initial)
+            return Displace(
+                numeric_primitive(self) + numeric_primitive(other),
+                ss=self.ss + other.ss,
+                ss_initial=self.ss_initial + other.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(self) + numeric_primitive(other),
-                            ss=self.ss + numeric_primitive(other), ss_initial=self.ss_initial + numeric_primitive(other))
+            return Displace(
+                numeric_primitive(self) + numeric_primitive(other),
+                ss=self.ss + numeric_primitive(other),
+                ss_initial=self.ss_initial + numeric_primitive(other),
+            )
         else:
             # TODO: See if there is a different, systematic way we want to handle this case.
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(self) + numeric_primitive(other),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(self) + numeric_primitive(other),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __radd__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(other) + numeric_primitive(self),
-                            ss=other.ss + self.ss, ss_initial=other.ss_initial + self.ss_initial)
+            return Displace(
+                numeric_primitive(other) + numeric_primitive(self),
+                ss=other.ss + self.ss,
+                ss_initial=other.ss_initial + self.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(other) + numeric_primitive(self),
-                            ss=numeric_primitive(other) + self.ss, ss_initial=numeric_primitive(other) + self.ss_initial)
+            return Displace(
+                numeric_primitive(other) + numeric_primitive(self),
+                ss=numeric_primitive(other) + self.ss,
+                ss_initial=numeric_primitive(other) + self.ss_initial,
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(other) + numeric_primitive(self),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(other) + numeric_primitive(self),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __sub__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(self) - numeric_primitive(other),
-                            ss=self.ss - other.ss, ss_initial=self.ss_initial - other.ss_initial)
+            return Displace(
+                numeric_primitive(self) - numeric_primitive(other),
+                ss=self.ss - other.ss,
+                ss_initial=self.ss_initial - other.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(self) - numeric_primitive(other),
-                            ss=self.ss - numeric_primitive(other), ss_initial=self.ss_initial - numeric_primitive(other))
+            return Displace(
+                numeric_primitive(self) - numeric_primitive(other),
+                ss=self.ss - numeric_primitive(other),
+                ss_initial=self.ss_initial - numeric_primitive(other),
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(self) - numeric_primitive(other),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(self) - numeric_primitive(other),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __rsub__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(other) - numeric_primitive(self),
-                            ss=other.ss - self.ss, ss_initial=other.ss_initial - self.ss_initial)
+            return Displace(
+                numeric_primitive(other) - numeric_primitive(self),
+                ss=other.ss - self.ss,
+                ss_initial=other.ss_initial - self.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(other) - numeric_primitive(self),
-                            ss=numeric_primitive(other) - self.ss, ss_initial=numeric_primitive(other) - self.ss_initial)
+            return Displace(
+                numeric_primitive(other) - numeric_primitive(self),
+                ss=numeric_primitive(other) - self.ss,
+                ss_initial=numeric_primitive(other) - self.ss_initial,
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(other) - numeric_primitive(self),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(other) - numeric_primitive(self),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __mul__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(self) * numeric_primitive(other),
-                            ss=self.ss * other.ss, ss_initial=self.ss_initial * other.ss_initial)
+            return Displace(
+                numeric_primitive(self) * numeric_primitive(other),
+                ss=self.ss * other.ss,
+                ss_initial=self.ss_initial * other.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(self) * numeric_primitive(other),
-                            ss=self.ss * numeric_primitive(other), ss_initial=self.ss_initial * numeric_primitive(other))
+            return Displace(
+                numeric_primitive(self) * numeric_primitive(other),
+                ss=self.ss * numeric_primitive(other),
+                ss_initial=self.ss_initial * numeric_primitive(other),
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(self) * numeric_primitive(other),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(self) * numeric_primitive(other),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __rmul__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(other) * numeric_primitive(self),
-                            ss=other.ss * self.ss, ss_initial=other.ss_initial * self.ss_initial)
+            return Displace(
+                numeric_primitive(other) * numeric_primitive(self),
+                ss=other.ss * self.ss,
+                ss_initial=other.ss_initial * self.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(other) * numeric_primitive(self),
-                            ss=numeric_primitive(other) * self.ss, ss_initial=numeric_primitive(other) * self.ss_initial)
+            return Displace(
+                numeric_primitive(other) * numeric_primitive(self),
+                ss=numeric_primitive(other) * self.ss,
+                ss_initial=numeric_primitive(other) * self.ss_initial,
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(other) * numeric_primitive(self),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(other) * numeric_primitive(self),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __truediv__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(self) / numeric_primitive(other),
-                            ss=self.ss / other.ss, ss_initial=self.ss_initial / other.ss_initial)
+            return Displace(
+                numeric_primitive(self) / numeric_primitive(other),
+                ss=self.ss / other.ss,
+                ss_initial=self.ss_initial / other.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(self) / numeric_primitive(other),
-                            ss=self.ss / numeric_primitive(other), ss_initial=self.ss_initial / numeric_primitive(other))
+            return Displace(
+                numeric_primitive(self) / numeric_primitive(other),
+                ss=self.ss / numeric_primitive(other),
+                ss_initial=self.ss_initial / numeric_primitive(other),
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(self) / numeric_primitive(other),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(self) / numeric_primitive(other),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __rtruediv__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(other) / numeric_primitive(self),
-                            ss=other.ss / self.ss, ss_initial=other.ss_initial / self.ss_initial)
+            return Displace(
+                numeric_primitive(other) / numeric_primitive(self),
+                ss=other.ss / self.ss,
+                ss_initial=other.ss_initial / self.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(other) / numeric_primitive(self),
-                            ss=numeric_primitive(other) / self.ss, ss_initial=numeric_primitive(other) / self.ss_initial)
+            return Displace(
+                numeric_primitive(other) / numeric_primitive(self),
+                ss=numeric_primitive(other) / self.ss,
+                ss_initial=numeric_primitive(other) / self.ss_initial,
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(other) / numeric_primitive(self),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(other) / numeric_primitive(self),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __pow__(self, power):
         if isinstance(power, Displace):
-            return Displace(numeric_primitive(self) ** numeric_primitive(power),
-                            ss=self.ss ** power.ss, ss_initial=self.ss_initial ** power.ss_initial)
+            return Displace(
+                numeric_primitive(self) ** numeric_primitive(power),
+                ss=self.ss**power.ss,
+                ss_initial=self.ss_initial**power.ss_initial,
+            )
         elif np.isscalar(power):
-            return Displace(numeric_primitive(self) ** numeric_primitive(power),
-                            ss=self.ss ** numeric_primitive(power), ss_initial=self.ss_initial ** numeric_primitive(power))
+            return Displace(
+                numeric_primitive(self) ** numeric_primitive(power),
+                ss=self.ss ** numeric_primitive(power),
+                ss_initial=self.ss_initial ** numeric_primitive(power),
+            )
         else:
-            warn("\n" + f"Applying operation to {power}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(self) ** numeric_primitive(power),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {power}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(self) ** numeric_primitive(power),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
     def __rpow__(self, other):
         if isinstance(other, Displace):
-            return Displace(numeric_primitive(other) ** numeric_primitive(self),
-                            ss=other.ss ** self.ss, ss_initial=other.ss_initial ** self.ss_initial)
+            return Displace(
+                numeric_primitive(other) ** numeric_primitive(self),
+                ss=other.ss**self.ss,
+                ss_initial=other.ss_initial**self.ss_initial,
+            )
         elif np.isscalar(other):
-            return Displace(numeric_primitive(other) ** numeric_primitive(self),
-                            ss=numeric_primitive(other) ** self.ss, ss_initial=numeric_primitive(other) ** self.ss_initial)
+            return Displace(
+                numeric_primitive(other) ** numeric_primitive(self),
+                ss=numeric_primitive(other) ** self.ss,
+                ss_initial=numeric_primitive(other) ** self.ss_initial,
+            )
         else:
-            warn("\n" + f"Applying operation to {other}, a vector, and {self}, a Displace." + "\n" +
-                 f"The resulting Displace object will retain the steady-state value of the original Displace object.")
-            return Displace(numeric_primitive(other) ** numeric_primitive(self),
-                            ss=self.ss, ss_initial=self.ss_initial)
+            warn(
+                "\n"
+                + f"Applying operation to {other}, a vector, and {self}, a Displace."
+                + "\n"
+                + f"The resulting Displace object will retain the steady-state value of the original Displace object."
+            )
+            return Displace(
+                numeric_primitive(other) ** numeric_primitive(self),
+                ss=self.ss,
+                ss_initial=self.ss_initial,
+            )
 
 
 class AccumulatedDerivative:
@@ -475,7 +616,7 @@ class AccumulatedDerivative:
       values of the accumulated derivative themselves.
     """
 
-    def __init__(self, elements={(0, 0): 1.}, f_value=1.):
+    def __init__(self, elements={(0, 0): 1.0}, f_value=1.0):
         self.elements = elements
         self.f_value = f_value
         self._keys = list(self.elements.keys())
@@ -486,8 +627,12 @@ class AccumulatedDerivative:
         return ignore(self.f_value)
 
     def __repr__(self):
-        formatted = '{' + ', '.join(f'({i}, {m}): {x:.3f}' for (i, m), x in self.elements.items()) + '}'
-        return f'AccumulatedDerivative({formatted})'
+        formatted = (
+            "{"
+            + ", ".join(f"({i}, {m}): {x:.3f}" for (i, m), x in self.elements.items())
+            + "}"
+        )
+        return f"AccumulatedDerivative({formatted})"
 
     # TODO: Rewrite this comment for clarity once confirmed that the paper's notation will change
     #   (i, m)/(j, n) correspond to the Q_(-i, m), Q_(-j, n) operators defined for
@@ -499,166 +644,283 @@ class AccumulatedDerivative:
     #   s.t. Q_(-i, 0) Q_(-j, n) = Q(k,l)
     def __call__(self, i):
         keys = [(i + j, compute_l(-i, 0, -j, n)) for j, n in self._keys]
-        return AccumulatedDerivative(elements=dict(zip(keys, self._fp_values)), f_value=self.f_value)
+        return AccumulatedDerivative(
+            elements=dict(zip(keys, self._fp_values)), f_value=self.f_value
+        )
 
     def apply(self, f, h=1e-5, **kwargs):
         if f == np.log:
-            return AccumulatedDerivative(elements=dict(zip(self._keys,
-                                                           [1 / self.f_value * x for x in self._fp_values])),
-                                         f_value=np.log(self.f_value))
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(self._keys, [1 / self.f_value * x for x in self._fp_values])
+                ),
+                f_value=np.log(self.f_value),
+            )
         else:
-            return AccumulatedDerivative(elements=dict(zip(self._keys, [(f(self.f_value + h, **kwargs) -
-                                                                         f(self.f_value - h, **kwargs)) / (2 * h) * x
-                                                                        for x in self._fp_values])),
-                                         f_value=f(self.f_value, **kwargs))
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(
+                        self._keys,
+                        [
+                            (
+                                f(self.f_value + h, **kwargs)
+                                - f(self.f_value - h, **kwargs)
+                            )
+                            / (2 * h)
+                            * x
+                            for x in self._fp_values
+                        ],
+                    )
+                ),
+                f_value=f(self.f_value, **kwargs),
+            )
 
     def __pos__(self):
-        return AccumulatedDerivative(elements=dict(zip(self._keys, +self._fp_values)), f_value=+self.f_value)
+        return AccumulatedDerivative(
+            elements=dict(zip(self._keys, +self._fp_values)), f_value=+self.f_value
+        )
 
     def __neg__(self):
-        return AccumulatedDerivative(elements=dict(zip(self._keys, -self._fp_values)), f_value=-self.f_value)
+        return AccumulatedDerivative(
+            elements=dict(zip(self._keys, -self._fp_values)), f_value=-self.f_value
+        )
 
     def __add__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, self._fp_values)),
-                                         f_value=self.f_value + numeric_primitive(other))
+            return AccumulatedDerivative(
+                elements=dict(zip(self._keys, self._fp_values)),
+                f_value=self.f_value + numeric_primitive(other),
+            )
         elif isinstance(other, AccumulatedDerivative):
             elements = self.elements.copy()
             for im, x in other.elements.items():
                 if im in elements:
                     elements[im] += x
                     # safeguard to retain sparsity: disregard extremely small elements (num error)
-                    if abs(elements[im]) < 1E-14:
+                    if abs(elements[im]) < 1e-14:
                         del elements[im]
                 else:
                     elements[im] = x
 
-            return AccumulatedDerivative(elements=elements, f_value=self.f_value + other.f_value)
+            return AccumulatedDerivative(
+                elements=elements, f_value=self.f_value + other.f_value
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __radd__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, self._fp_values)),
-                                         f_value=numeric_primitive(other) + self.f_value)
+            return AccumulatedDerivative(
+                elements=dict(zip(self._keys, self._fp_values)),
+                f_value=numeric_primitive(other) + self.f_value,
+            )
         elif isinstance(other, AccumulatedDerivative):
             elements = other.elements.copy()
             for im, x in self.elements.items():
                 if im in elements:
                     elements[im] += x
                     # safeguard to retain sparsity: disregard extremely small elements (num error)
-                    if abs(elements[im]) < 1E-14:
+                    if abs(elements[im]) < 1e-14:
                         del elements[im]
                 else:
                     elements[im] = x
 
-            return AccumulatedDerivative(elements=elements, f_value=other.f_value + self.f_value)
+            return AccumulatedDerivative(
+                elements=elements, f_value=other.f_value + self.f_value
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __sub__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, self._fp_values)),
-                                         f_value=self.f_value - numeric_primitive(other))
+            return AccumulatedDerivative(
+                elements=dict(zip(self._keys, self._fp_values)),
+                f_value=self.f_value - numeric_primitive(other),
+            )
         elif isinstance(other, AccumulatedDerivative):
             elements = self.elements.copy()
             for im, x in other.elements.items():
                 if im in elements:
                     elements[im] -= x
                     # safeguard to retain sparsity: disregard extremely small elements (num error)
-                    if abs(elements[im]) < 1E-14:
+                    if abs(elements[im]) < 1e-14:
                         del elements[im]
                 else:
                     elements[im] = -x
 
-            return AccumulatedDerivative(elements=elements, f_value=self.f_value - other.f_value)
+            return AccumulatedDerivative(
+                elements=elements, f_value=self.f_value - other.f_value
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __rsub__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, -self._fp_values)),
-                                         f_value=numeric_primitive(other) - self.f_value)
+            return AccumulatedDerivative(
+                elements=dict(zip(self._keys, -self._fp_values)),
+                f_value=numeric_primitive(other) - self.f_value,
+            )
         elif isinstance(other, AccumulatedDerivative):
             elements = other.elements.copy()
             for im, x in self.elements.items():
                 if im in elements:
                     elements[im] -= x
                     # safeguard to retain sparsity: disregard extremely small elements (num error)
-                    if abs(elements[im]) < 1E-14:
+                    if abs(elements[im]) < 1e-14:
                         del elements[im]
                 else:
                     elements[im] = -x
 
-            return AccumulatedDerivative(elements=elements, f_value=other.f_value - self.f_value)
+            return AccumulatedDerivative(
+                elements=elements, f_value=other.f_value - self.f_value
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __mul__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, self._fp_values * numeric_primitive(other))),
-                                         f_value=self.f_value * numeric_primitive(other))
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(self._keys, self._fp_values * numeric_primitive(other))
+                ),
+                f_value=self.f_value * numeric_primitive(other),
+            )
         elif isinstance(other, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=(self * other.f_value + other * self.f_value).elements,
-                                         f_value=self.f_value * other.f_value)
+            return AccumulatedDerivative(
+                elements=(self * other.f_value + other * self.f_value).elements,
+                f_value=self.f_value * other.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __rmul__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, numeric_primitive(other) * self._fp_values)),
-                                         f_value=numeric_primitive(other) * self.f_value)
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(self._keys, numeric_primitive(other) * self._fp_values)
+                ),
+                f_value=numeric_primitive(other) * self.f_value,
+            )
         elif isinstance(other, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=(other * self.f_value + self * other.f_value).elements,
-                                         f_value=other.f_value * self.f_value)
+            return AccumulatedDerivative(
+                elements=(other * self.f_value + self * other.f_value).elements,
+                f_value=other.f_value * self.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __truediv__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, self._fp_values / numeric_primitive(other))),
-                                         f_value=self.f_value / numeric_primitive(other))
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(self._keys, self._fp_values / numeric_primitive(other))
+                ),
+                f_value=self.f_value / numeric_primitive(other),
+            )
         elif isinstance(other, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=((other.f_value * self - self.f_value * other) /
-                                                   (other.f_value ** 2)).elements,
-                                         f_value=self.f_value / other.f_value)
+            return AccumulatedDerivative(
+                elements=(
+                    (other.f_value * self - self.f_value * other) / (other.f_value**2)
+                ).elements,
+                f_value=self.f_value / other.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __rtruediv__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, -numeric_primitive(other) /
-                                                           self.f_value ** 2 * self._fp_values)),
-                                         f_value=numeric_primitive(other) / self.f_value)
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(
+                        self._keys,
+                        -numeric_primitive(other) / self.f_value**2 * self._fp_values,
+                    )
+                ),
+                f_value=numeric_primitive(other) / self.f_value,
+            )
         elif isinstance(other, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=((self.f_value * other - other.f_value * self) /
-                                                   (self.f_value ** 2)).elements, f_value=other.f_value / self.f_value)
+            return AccumulatedDerivative(
+                elements=(
+                    (self.f_value * other - other.f_value * self) / (self.f_value**2)
+                ).elements,
+                f_value=other.f_value / self.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __pow__(self, power, modulo=None):
         if np.isscalar(power):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, numeric_primitive(power) * self.f_value
-                                                           ** numeric_primitive(power - 1) * self._fp_values)),
-                                         f_value=self.f_value ** numeric_primitive(power))
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(
+                        self._keys,
+                        numeric_primitive(power)
+                        * self.f_value ** numeric_primitive(power - 1)
+                        * self._fp_values,
+                    )
+                ),
+                f_value=self.f_value ** numeric_primitive(power),
+            )
         elif isinstance(power, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=(self.f_value ** (power.f_value - 1) * (
-                    power.f_value * self + power * self.f_value * np.log(self.f_value))).elements,
-                                         f_value=self.f_value ** power.f_value)
+            return AccumulatedDerivative(
+                elements=(
+                    self.f_value ** (power.f_value - 1)
+                    * (
+                        power.f_value * self
+                        + power * self.f_value * np.log(self.f_value)
+                    )
+                ).elements,
+                f_value=self.f_value**power.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
     def __rpow__(self, other):
         if np.isscalar(other):
-            return AccumulatedDerivative(elements=dict(zip(self._keys, np.log(other) * numeric_primitive(other) **
-                                                           self.f_value * self._fp_values)),
-                                         f_value=numeric_primitive(other) ** self.f_value)
+            return AccumulatedDerivative(
+                elements=dict(
+                    zip(
+                        self._keys,
+                        np.log(other)
+                        * numeric_primitive(other) ** self.f_value
+                        * self._fp_values,
+                    )
+                ),
+                f_value=numeric_primitive(other) ** self.f_value,
+            )
         elif isinstance(other, AccumulatedDerivative):
-            return AccumulatedDerivative(elements=(other.f_value ** (self.f_value - 1) * (
-                    self.f_value * other + self * other.f_value * np.log(other.f_value))).elements,
-                                         f_value=other.f_value ** self.f_value)
+            return AccumulatedDerivative(
+                elements=(
+                    other.f_value ** (self.f_value - 1)
+                    * (
+                        self.f_value * other
+                        + self * other.f_value * np.log(other.f_value)
+                    )
+                ).elements,
+                f_value=other.f_value**self.f_value,
+            )
         else:
-            raise NotImplementedError("This operation is not yet supported for non-scalar arguments")
+            raise NotImplementedError(
+                "This operation is not yet supported for non-scalar arguments"
+            )
 
 
 def compute_l(i, m, j, n):
@@ -690,7 +952,9 @@ def vectorize_func_over_time(func, *args):
     # np.shape(args[d_inds[0]])[0] is T, the size of the first dimension of the first Displace object
     # provided in args (assume all Displaces are the same shape s.t. they're conformable)
     for t in range(np.shape(args[d_inds[0]])[0]):
-        x_path.append(func(*[args[i][t] if i in d_inds else args[i] for i in range(len(args))]))
+        x_path.append(
+            func(*[args[i][t] if i in d_inds else args[i] for i in range(len(args))])
+        )
 
     return np.array(x_path)
 
@@ -700,9 +964,18 @@ def apply_function(func, *args, **kwargs):
     properly instantiates the steady state value of the created Displace object"""
     if np.any([isinstance(x, Displace) for x in args]):
         x_path = vectorize_func_over_time(func, *args)
-        return Displace(x_path, ss=func(*[x.ss if isinstance(x, Displace) else numeric_primitive(x) for x in args]))
+        return Displace(
+            x_path,
+            ss=func(
+                *[
+                    x.ss if isinstance(x, Displace) else numeric_primitive(x)
+                    for x in args
+                ]
+            ),
+        )
     elif np.any([isinstance(x, AccumulatedDerivative) for x in args]):
         raise NotImplementedError(
-            "Have not yet implemented general apply_function functionality for AccumulatedDerivatives")
+            "Have not yet implemented general apply_function functionality for AccumulatedDerivatives"
+        )
     else:
         return func(*args, **kwargs)

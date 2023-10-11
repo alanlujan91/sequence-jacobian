@@ -7,9 +7,18 @@ from ..utilities.ordered_set import OrderedSet
 
 def solved(unknowns, targets, solver=None, solver_kwargs={}, name=""):
     """Convenience @solved(unknowns=..., targets=...) decorator on a single SimpleBlock"""
+
     # call as decorator, return function of function
     def singleton_solved_block(f):
-        return SolvedBlock(simple(f).rename(f.__name__ + '_inner'), f.__name__, unknowns, targets, solver=solver, solver_kwargs=solver_kwargs)
+        return SolvedBlock(
+            simple(f).rename(f.__name__ + "_inner"),
+            f.__name__,
+            unknowns,
+            targets,
+            solver=solver,
+            solver_kwargs=solver_kwargs,
+        )
+
     return singleton_solved_block
 
 
@@ -26,7 +35,9 @@ class SolvedBlock(Block, Parent):
     nonlinear transition path such that all internal targets of the mini SHADE model are zero.
     """
 
-    def __init__(self, block: Block, name, unknowns, targets, solver=None, solver_kwargs={}):
+    def __init__(
+        self, block: Block, name, unknowns, targets, solver=None, solver_kwargs={}
+    ):
         super().__init__()
 
         # since we dispatch to solve methods, same set of options
@@ -44,11 +55,17 @@ class SolvedBlock(Block, Parent):
 
         # validate unknowns and targets
         if not len(unknowns) == len(targets):
-            raise ValueError(f'Unknowns {set(unknowns)} and targets {set(targets)} different sizes in SolvedBlock {name}')
+            raise ValueError(
+                f"Unknowns {set(unknowns)} and targets {set(targets)} different sizes in SolvedBlock {name}"
+            )
         if not set(unknowns) <= block.inputs:
-            raise ValueError(f'Unknowns has element {set(unknowns) - block.inputs} not in inputs in SolvedBlock {name}')
+            raise ValueError(
+                f"Unknowns has element {set(unknowns) - block.inputs} not in inputs in SolvedBlock {name}"
+            )
         if not set(targets) <= block.outputs:
-            raise ValueError(f'Targets has element {set(targets) - block.outputs} not in outputs in SolvedBlock {name}')
+            raise ValueError(
+                f"Targets has element {set(targets) - block.outputs} not in outputs in SolvedBlock {name}"
+            )
 
         # what are overall outputs and inputs?
         self.outputs = block.outputs | set(unknowns)
@@ -59,35 +76,80 @@ class SolvedBlock(Block, Parent):
 
     def _steady_state(self, calibration, dissolve, options, **kwargs):
         if self.name in dissolve:
-            kwargs['solver'] = "solved"
+            kwargs["solver"] = "solved"
             unknowns = {k: v for k, v in calibration.items() if k in self.unknowns}
         else:
             unknowns = self.unknowns
-            if 'solver' not in kwargs:
+            if "solver" not in kwargs:
                 # TODO: replace this with default option
-                kwargs['solver'] = self.solver
+                kwargs["solver"] = self.solver
 
-        return self.block.solve_steady_state(calibration, unknowns, self.targets, options, **kwargs)
+        return self.block.solve_steady_state(
+            calibration, unknowns, self.targets, options, **kwargs
+        )
 
-    def _impulse_nonlinear(self, ss, inputs, outputs, internals, Js, options, ss_initial, **kwargs):
-        return self.block.solve_impulse_nonlinear(ss, OrderedSet(self.unknowns), OrderedSet(self.targets),
-                                        inputs, outputs, internals, Js, options, self._get_H_U_factored(Js), ss_initial, **kwargs)
+    def _impulse_nonlinear(
+        self, ss, inputs, outputs, internals, Js, options, ss_initial, **kwargs
+    ):
+        return self.block.solve_impulse_nonlinear(
+            ss,
+            OrderedSet(self.unknowns),
+            OrderedSet(self.targets),
+            inputs,
+            outputs,
+            internals,
+            Js,
+            options,
+            self._get_H_U_factored(Js),
+            ss_initial,
+            **kwargs,
+        )
 
     def _impulse_linear(self, ss, inputs, outputs, Js, options):
-        return self.block.solve_impulse_linear(ss, OrderedSet(self.unknowns), OrderedSet(self.targets),
-                                               inputs, outputs, Js, options, self._get_H_U_factored(Js))
+        return self.block.solve_impulse_linear(
+            ss,
+            OrderedSet(self.unknowns),
+            OrderedSet(self.targets),
+            inputs,
+            outputs,
+            Js,
+            options,
+            self._get_H_U_factored(Js),
+        )
 
     def _jacobian(self, ss, inputs, outputs, T, Js, options):
-        return self.block.solve_jacobian(ss, OrderedSet(self.unknowns), OrderedSet(self.targets),
-                                    inputs, outputs, T, Js, options, self._get_H_U_factored(Js))[outputs]
+        return self.block.solve_jacobian(
+            ss,
+            OrderedSet(self.unknowns),
+            OrderedSet(self.targets),
+            inputs,
+            outputs,
+            T,
+            Js,
+            options,
+            self._get_H_U_factored(Js),
+        )[outputs]
 
     def _partial_jacobians(self, ss, inputs, outputs, T, Js, options):
         # call it on the child first
-        inner_Js = self.block.partial_jacobians(ss, (OrderedSet(self.unknowns) | inputs), 
-                                                (OrderedSet(self.targets) | outputs - self.unknowns.keys()), T, Js, options)
+        inner_Js = self.block.partial_jacobians(
+            ss,
+            (OrderedSet(self.unknowns) | inputs),
+            (OrderedSet(self.targets) | outputs - self.unknowns.keys()),
+            T,
+            Js,
+            options,
+        )
 
         # with these inner Js, also compute H_U and factorize
-        H_U = self.block.jacobian(ss, OrderedSet(self.unknowns), OrderedSet(self.targets), T, inner_Js, options)
+        H_U = self.block.jacobian(
+            ss,
+            OrderedSet(self.unknowns),
+            OrderedSet(self.targets),
+            T,
+            inner_Js,
+            options,
+        )
         H_U_factored = FactoredJacobianDict(H_U, T)
 
         return {**inner_Js, self.name: H_U_factored}

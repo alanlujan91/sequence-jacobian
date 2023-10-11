@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit
 
+
 @njit
 def forward_policy_1d(D, x_i, x_pi):
     nZ, nX = D.shape
@@ -12,8 +13,8 @@ def forward_policy_1d(D, x_i, x_pi):
             d = D[iz, ix]
 
             Dnew[iz, i] += d * pi
-            Dnew[iz, i+1] += d * (1 - pi)
-    
+            Dnew[iz, i + 1] += d * (1 - pi)
+
     return Dnew
 
 
@@ -25,7 +26,7 @@ def expectation_policy_1d(X, x_i, x_pi):
         for ix in range(nX):
             i = x_i[iz, ix]
             pi = x_pi[iz, ix]
-            Xnew[iz, ix] = pi * X[iz, i] + (1-pi) * X[iz, i+1]
+            Xnew[iz, ix] = pi * X[iz, i] + (1 - pi) * X[iz, i + 1]
     return Xnew
 
 
@@ -57,9 +58,9 @@ def forward_policy_2d(D, x_i, y_i, x_pi, y_pi):
                 alpha = y_pi[iz, ix, iy]
 
                 Dnew[iz, ixp, iyp] += alpha * beta * D[iz, ix, iy]
-                Dnew[iz, ixp+1, iyp] += alpha * (1 - beta) * D[iz, ix, iy]
-                Dnew[iz, ixp, iyp+1] += (1 - alpha) * beta * D[iz, ix, iy]
-                Dnew[iz, ixp+1, iyp+1] += (1 - alpha) * (1 - beta) * D[iz, ix, iy]
+                Dnew[iz, ixp + 1, iyp] += alpha * (1 - beta) * D[iz, ix, iy]
+                Dnew[iz, ixp, iyp + 1] += (1 - alpha) * beta * D[iz, ix, iy]
+                Dnew[iz, ixp + 1, iyp + 1] += (1 - alpha) * (1 - beta) * D[iz, ix, iy]
     return Dnew
 
 
@@ -75,14 +76,19 @@ def expectation_policy_2d(X, x_i, y_i, x_pi, y_pi):
                 alpha = x_pi[iz, ix, iy]
                 beta = y_pi[iz, ix, iy]
 
-                Xnew[iz, ix, iy] = (alpha * beta * X[iz, ixp, iyp] + alpha * (1-beta) * X[iz, ixp, iyp+1] +
-                                    (1-alpha) * beta * X[iz, ixp+1, iyp] +
-                                    (1-alpha) * (1-beta) * X[iz, ixp+1, iyp+1])
+                Xnew[iz, ix, iy] = (
+                    alpha * beta * X[iz, ixp, iyp]
+                    + alpha * (1 - beta) * X[iz, ixp, iyp + 1]
+                    + (1 - alpha) * beta * X[iz, ixp + 1, iyp]
+                    + (1 - alpha) * (1 - beta) * X[iz, ixp + 1, iyp + 1]
+                )
     return Xnew
 
 
 @njit
-def forward_policy_shock_2d(Dss, x_i_ss, y_i_ss, x_pi_ss, y_pi_ss, x_pi_shock, y_pi_shock):
+def forward_policy_shock_2d(
+    Dss, x_i_ss, y_i_ss, x_pi_ss, y_pi_ss, x_pi_shock, y_pi_shock
+):
     """Endogenous update part of forward_step_shock_2d"""
     nZ, nX, nY = Dss.shape
     Dshock = np.zeros_like(Dss)
@@ -98,7 +104,9 @@ def forward_policy_shock_2d(Dss, x_i_ss, y_i_ss, x_pi_ss, y_pi_ss, x_pi_shock, y
                 dbeta = y_pi_shock[iz, ix, iy] * Dss[iz, ix, iy]
 
                 Dshock[iz, ixp, iyp] += dalpha * beta + alpha * dbeta
-                Dshock[iz, ixp+1, iyp] += dbeta * (1-alpha) - beta * dalpha
-                Dshock[iz, ixp, iyp+1] += dalpha * (1-beta) - alpha * dbeta
-                Dshock[iz, ixp+1, iyp+1] -= dalpha * (1-beta) + dbeta * (1-alpha)
+                Dshock[iz, ixp + 1, iyp] += dbeta * (1 - alpha) - beta * dalpha
+                Dshock[iz, ixp, iyp + 1] += dalpha * (1 - beta) - alpha * dbeta
+                Dshock[iz, ixp + 1, iyp + 1] -= dalpha * (1 - beta) + dbeta * (
+                    1 - alpha
+                )
     return Dshock

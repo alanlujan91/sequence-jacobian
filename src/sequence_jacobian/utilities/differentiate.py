@@ -3,7 +3,7 @@
 from .misc import make_tuple
 
 
-def numerical_diff(func, ssinputs_dict, shock_dict, h=1E-4, y_ss_list=None):
+def numerical_diff(func, ssinputs_dict, shock_dict, h=1e-4, y_ss_list=None):
     """Differentiate function numerically via forward difference, i.e. calculate
 
     f'(xss)*shock = (f(xss + h*shock) - f(xss))/h
@@ -28,7 +28,10 @@ def numerical_diff(func, ssinputs_dict, shock_dict, h=1E-4, y_ss_list=None):
         y_ss_list = make_tuple(func(**ssinputs_dict))
 
     # response to small shock
-    shocked_inputs = {**ssinputs_dict, **{k: ssinputs_dict[k] + h * shock for k, shock in shock_dict.items()}}
+    shocked_inputs = {
+        **ssinputs_dict,
+        **{k: ssinputs_dict[k] + h * shock for k, shock in shock_dict.items()},
+    }
     y_list = make_tuple(func(**shocked_inputs))
 
     # scale responses back up, dividing by h
@@ -37,20 +40,28 @@ def numerical_diff(func, ssinputs_dict, shock_dict, h=1E-4, y_ss_list=None):
     return dy_list
 
 
-def numerical_diff_symmetric(func, ssinputs_dict, shock_dict, h=1E-4):
+def numerical_diff_symmetric(func, ssinputs_dict, shock_dict, h=1e-4):
     """Same as numerical_diff, but differentiate numerically using central (symmetric) difference, i.e.
 
     f'(xss)*shock = (f(xss + h*shock) - f(xss - h*shock))/(2*h)
     """
 
     # response to small shock in each direction
-    shocked_inputs_up = {**ssinputs_dict, **{k: ssinputs_dict[k] + h * shock for k, shock in shock_dict.items()}}
+    shocked_inputs_up = {
+        **ssinputs_dict,
+        **{k: ssinputs_dict[k] + h * shock for k, shock in shock_dict.items()},
+    }
     y_up_list = make_tuple(func(**shocked_inputs_up))
 
-    shocked_inputs_down = {**ssinputs_dict, **{k: ssinputs_dict[k] - h * shock for k, shock in shock_dict.items()}}
+    shocked_inputs_down = {
+        **ssinputs_dict,
+        **{k: ssinputs_dict[k] - h * shock for k, shock in shock_dict.items()},
+    }
     y_down_list = make_tuple(func(**shocked_inputs_down))
 
     # scale responses back up, dividing by h
-    dy_list = [(y_up - y_down) / (2*h) for y_up, y_down in zip(y_up_list, y_down_list)]
+    dy_list = [
+        (y_up - y_down) / (2 * h) for y_up, y_down in zip(y_up_list, y_down_list)
+    ]
 
     return dy_list

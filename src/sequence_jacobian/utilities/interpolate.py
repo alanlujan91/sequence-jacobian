@@ -24,7 +24,9 @@ import numpy as np
 from numba import njit, guvectorize
 
 
-@guvectorize(['void(float64[:], float64[:], float64[:], float64[:])'], '(n),(nq),(n)->(nq)')
+@guvectorize(
+    ["void(float64[:], float64[:], float64[:], float64[:])"], "(n),(nq),(n)->(nq)"
+)
 def interpolate_y(x, xq, y, yq):
     """Efficient linear interpolation exploiting monotonicity.
 
@@ -59,7 +61,9 @@ def interpolate_y(x, xq, y, yq):
         yq[xqi_cur] = xqpi_cur * y[xi] + (1 - xqpi_cur) * y[xi + 1]
 
 
-@guvectorize(['void(float64[:], float64[:], uint32[:], float64[:])'], '(n),(nq)->(nq),(nq)')
+@guvectorize(
+    ["void(float64[:], float64[:], uint32[:], float64[:])"], "(n),(nq)->(nq),(nq)"
+)
 def interpolate_coord(x, xq, xqi, xqpi):
     """Get representation xqi, xqpi of xq interpolated against x:
     xq = xqpi * x[xqi] + (1-xqpi) * x[xqi+1]
@@ -92,8 +96,13 @@ def interpolate_coord(x, xq, xqi, xqpi):
         xqi[xqi_cur] = xi
 
 
-@guvectorize(['void(int64[:], float64[:], float64[:], float64[:])',
-              'void(uint32[:], float64[:], float64[:], float64[:])'], '(nq),(nq),(n)->(nq)')
+@guvectorize(
+    [
+        "void(int64[:], float64[:], float64[:], float64[:])",
+        "void(uint32[:], float64[:], float64[:], float64[:])",
+    ],
+    "(nq),(nq),(n)->(nq)",
+)
 def apply_coord(x_i, x_pi, y, yq):
     """Use representation xqi, xqpi to get yq at xq:
     yq = xqpi * y[xqi] + (1-xqpi) * y[xqi+1]
@@ -111,15 +120,15 @@ def apply_coord(x_i, x_pi, y, yq):
     nq = x_i.shape[0]
     for iq in range(nq):
         y_low = y[x_i[iq]]
-        y_high = y[x_i[iq]+1]
-        yq[iq] = x_pi[iq]*y_low + (1-x_pi[iq])*y_high
+        y_high = y[x_i[iq] + 1]
+        yq[iq] = x_pi[iq] * y_low + (1 - x_pi[iq]) * y_high
 
 
-'''Part 2: More robust linear interpolation that does not require monotonicity in query points.
+"""Part 2: More robust linear interpolation that does not require monotonicity in query points.
 
     Intended for general use in interpolating policy rules that we cannot be sure are monotonic.
     Only get xqi, xqpi representation, for case where x is one-dimensional, in this application.
-'''
+"""
 
 
 def interpolate_coord_robust(x, xq, check_increasing=False):
@@ -141,10 +150,14 @@ def interpolate_coord_robust(x, xq, check_increasing=False):
     xqpi : array (k, nq), weights on lower bracketing gridpoints
     """
     if x.ndim != 1:
-        raise ValueError('Data input to interpolate_coord_robust must have exactly one dimension')
+        raise ValueError(
+            "Data input to interpolate_coord_robust must have exactly one dimension"
+        )
 
     if check_increasing and np.any(x[:-1] >= x[1:]):
-        raise ValueError('Data input to interpolate_coord_robust must be strictly increasing')
+        raise ValueError(
+            "Data input to interpolate_coord_robust must be strictly increasing"
+        )
 
     if xq.ndim == 1:
         return interpolate_coord_robust_vector(x, xq)
@@ -166,11 +179,11 @@ def interpolate_coord_robust_vector(x, xq):
         if xq[iq] < x[0]:
             ilow = 0
         elif xq[iq] > x[-2]:
-            ilow = n-2
+            ilow = n - 2
         else:
             # start binary search
             # should end with ilow and ihigh exactly 1 apart, bracketing variable
-            ihigh = n-1
+            ihigh = n - 1
             ilow = 0
             while ihigh - ilow > 1:
                 imid = (ihigh + ilow) // 2
@@ -180,12 +193,13 @@ def interpolate_coord_robust_vector(x, xq):
                     ihigh = imid
 
         xqi[iq] = ilow
-        xqpi[iq] = (x[ilow+1] - xq[iq]) / (x[ilow+1] - x[ilow])
+        xqpi[iq] = (x[ilow + 1] - xq[iq]) / (x[ilow + 1] - x[ilow])
 
     return xqi, xqpi
 
 
-'''Used in discrete choice problems'''
+"""Used in discrete choice problems"""
+
 
 @njit
 def interpolate_coord_njit(x, xq):
@@ -218,8 +232,8 @@ def apply_coord_njit(x_i, x_pi, y):
 
     for iq in range(nq):
         y_low = y[x_i[iq]]
-        y_high = y[x_i[iq]+1]
-        yq[iq] = x_pi[iq]*y_low + (1-x_pi[iq])*y_high
+        y_high = y[x_i[iq] + 1]
+        yq[iq] = x_pi[iq] * y_low + (1 - x_pi[iq]) * y_high
 
     return yq
 

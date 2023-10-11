@@ -2,9 +2,11 @@ import numpy as np
 from numba import njit
 import copy
 
+
 class IdentityMatrix:
     """Simple identity matrix class, cheaper than using actual np.eye(T) matrix,
     use to initialize Jacobian of a variable wrt itself"""
+
     __array_priority__ = 10_000
 
     def sparse(self):
@@ -22,10 +24,10 @@ class IdentityMatrix:
         return copy.deepcopy(other)
 
     def __mul__(self, a):
-        return a*self.sparse()
+        return a * self.sparse()
 
     def __rmul__(self, a):
-        return self.sparse()*a
+        return self.sparse() * a
 
     def __add__(self, x):
         return self.sparse() + x
@@ -46,7 +48,7 @@ class IdentityMatrix:
         return self
 
     def __repr__(self):
-        return 'IdentityMatrix'
+        return "IdentityMatrix"
 
 
 class SimpleSparse:
@@ -117,7 +119,7 @@ class SimpleSparse:
         elements = self.elements.copy()
         for im, x in self.elements.items():
             # safeguard to retain sparsity: disregard extremely small elements (num error)
-            if abs(elements[im]) < 1E-14:
+            if abs(elements[im]) < 1e-14:
                 del elements[im]
         return SimpleSparse(elements)
 
@@ -156,7 +158,7 @@ class SimpleSparse:
                 if im in elements:
                     elements[im] += x
                     # safeguard to retain sparsity: disregard extremely small elements (num error)
-                    if abs(elements[im]) < 1E-14:
+                    if abs(elements[im]) < 1e-14:
                         del elements[im]
                 else:
                     elements[im] = x
@@ -169,12 +171,14 @@ class SimpleSparse:
 
             # fancy trick to do this efficiently by writing A as flat vector
             # then (i, m) can be mapped directly to NumPy slicing!
-            A = A.flatten()     # use flatten, not ravel, since we'll modify A and want a copy
+            A = (
+                A.flatten()
+            )  # use flatten, not ravel, since we'll modify A and want a copy
             for (i, m), x in self.elements.items():
                 if i < 0:
-                    A[T * (-i) + (T + 1) * m::T + 1] += x
+                    A[T * (-i) + (T + 1) * m :: T + 1] += x
                 else:
-                    A[i + (T + 1) * m:(T - i) * T:T + 1] += x
+                    A[i + (T + 1) * m : (T - i) * T : T + 1] += x
             return A.reshape((T, T))
 
     def __radd__(self, A):
@@ -201,8 +205,12 @@ class SimpleSparse:
         return self * a
 
     def __repr__(self):
-        formatted = '{' + ', '.join(f'({i}, {m}): {x:.3f}' for (i, m), x in self.elements.items()) + '}'
-        return f'SimpleSparse({formatted})'
+        formatted = (
+            "{"
+            + ", ".join(f"({i}, {m}): {x:.3f}" for (i, m), x in self.elements.items())
+            + "}"
+        )
+        return f"SimpleSparse({formatted})"
 
     def __eq__(self, s):
         return self.elements == s.elements

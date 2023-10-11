@@ -7,9 +7,14 @@ from sequence_jacobian.blocks.support.law_of_motion import DiscreteChoice
 from ...utilities.function import ExtendedFunction, CombinedExtendedFunction
 from ...utilities.ordered_set import OrderedSet
 from ...utilities.misc import make_tuple, logit_choice
-from .law_of_motion import (lottery_1d, ShockedPolicyLottery1D,
-                            lottery_2d, ShockedPolicyLottery2D,
-                            Markov)
+from .law_of_motion import (
+    lottery_1d,
+    ShockedPolicyLottery1D,
+    lottery_2d,
+    ShockedPolicyLottery2D,
+    Markov,
+)
+
 
 class Stage:
     def backward_step(self, inputs, lawofmotion=False):
@@ -27,15 +32,21 @@ class Stage:
         outputs = self.backward_step(inputs, lawofmotion)
         if lawofmotion:
             outputs, lom = outputs
-        
+
         backward_outputs = {k: outputs[k] for k in self.backward_outputs}
         report = {k: outputs[k] for k in self.original_report}
 
         if hetoutputs and self.hetoutputs is not None:
             inputs = {**inputs, **outputs}
-            #report.update(self.hetoutputs(all_inputs))
+            # report.update(self.hetoutputs(all_inputs))
             # for some reason self.hetoutputs returns its inputs too, need to fix that
-            report.update({k: v for k, v in self.hetoutputs(inputs).items() if k in self.hetoutputs.outputs})
+            report.update(
+                {
+                    k: v
+                    for k, v in self.hetoutputs(inputs).items()
+                    if k in self.hetoutputs.outputs
+                }
+            )
 
         if lawofmotion:
             return (backward_outputs, report), lom
@@ -56,14 +67,16 @@ class Stage:
             hetoutputs = CombinedExtendedFunction(hetoutputs)
         self.process_hetoutputs(hetoutputs, tocopy=False)
 
-    def process_hetoutputs(self, hetoutputs: Optional[CombinedExtendedFunction], tocopy=True):
+    def process_hetoutputs(
+        self, hetoutputs: Optional[CombinedExtendedFunction], tocopy=True
+    ):
         if tocopy:
             self = copy.copy(self)
         self.inputs = self.original_inputs.copy()
         self.report = self.original_report.copy()
 
         if hetoutputs is not None:
-            self.inputs |= (hetoutputs.inputs - self.report - self.backward_outputs)
+            self.inputs |= hetoutputs.inputs - self.report - self.backward_outputs
             self.report |= hetoutputs.outputs
 
         self.hetoutputs = hetoutputs
@@ -85,8 +98,10 @@ class Stage:
     #     else:
     #         return {}
 
+
 class Continuous1D(Stage):
     """Stage that does one-dimensional endogenous continuous choice"""
+
     def __init__(self, backward, policy, f, name=None, hetoutputs=None):
         # subclass-specific attributes
         self.f = ExtendedFunction(f)
@@ -112,8 +127,10 @@ class Continuous1D(Stage):
             return outputs
         else:
             # TODO: option for monotonic?!
-            return outputs, lottery_1d(outputs[self.policy], inputs[self.policy + '_grid'], monotonic=False)
-    
+            return outputs, lottery_1d(
+                outputs[self.policy], inputs[self.policy + "_grid"], monotonic=False
+            )
+
     def backward_step_shock(self, ss, shocks, precomputed):
         space, i, grid, f = precomputed
         outputs = f.diff(shocks)
@@ -128,6 +145,7 @@ class Continuous1D(Stage):
 
 class Continuous2D(Stage):
     """Stage that does two-dimensional endogenous continuous choice"""
+
     def __init__(self, backward, policy, f, name=None, hetoutputs=None):
         # subclass-specific attributes
         self.f = ExtendedFunction(f)
@@ -153,9 +171,13 @@ class Continuous2D(Stage):
             return outputs
         else:
             # TODO: option for monotonic?!
-            return outputs, lottery_2d(outputs[self.policy[0]], outputs[self.policy[1]],
-                                       inputs[self.policy[0] + '_grid'], inputs[self.policy[1] + '_grid'])
-    
+            return outputs, lottery_2d(
+                outputs[self.policy[0]],
+                outputs[self.policy[1]],
+                inputs[self.policy[0] + "_grid"],
+                inputs[self.policy[1] + "_grid"],
+            )
+
     def backward_step_shock(self, ss, shocks, precomputed):
         space1, space2, i1, i2, grid1, grid2, f = precomputed
         outputs = f.diff(shocks)
@@ -169,12 +191,20 @@ class Continuous2D(Stage):
         grid1 = ss_lawofmotion.grid1
         grid2 = ss_lawofmotion.grid2
 
-        return (grid1[i1 + 1] - grid1[i1], grid2[i2 + 1] - grid2[i2],
-                i1, i2, grid1, grid2, self.f.differentiable(ss))
+        return (
+            grid1[i1 + 1] - grid1[i1],
+            grid2[i2 + 1] - grid2[i2],
+            i1,
+            i2,
+            grid1,
+            grid2,
+            self.f.differentiable(ss),
+        )
 
 
 class ExogenousMaker:
     """Call make_stage with backward returned by next stage to get Exogenous stage"""
+
     def __init__(self, markov_name, index, name=None, hetoutputs=None):
         self.markov_name = markov_name
         self.index = index
@@ -184,11 +214,14 @@ class ExogenousMaker:
         self.hetoutputs = hetoutputs
 
     def make_stage(self, backward):
-        return Exogenous(self.markov_name, self.index, self.name, backward, self.hetoutputs)
+        return Exogenous(
+            self.markov_name, self.index, self.name, backward, self.hetoutputs
+        )
 
 
 class Exogenous(Stage):
     """Stage that applies exogenous Markov process along one dimension"""
+
     def __init__(self, markov_name, index, name, backward, hetoutputs=None):
         # subclass-specific attributes
         self.markov_name = markov_name
@@ -203,8 +236,10 @@ class Exogenous(Stage):
         super().__init__(hetoutputs)
 
     def __repr__(self):
-        return f"<Stage-Exogenous '{self.name}' with Markov matrix '{self.markov_name}'>"
-    
+        return (
+            f"<Stage-Exogenous '{self.name}' with Markov matrix '{self.markov_name}'>"
+        )
+
     def backward_step(self, inputs, lawofmotion=False):
         Pi = Markov(inputs[self.markov_name], self.index)
         outputs = {k: Pi @ inputs[k] for k in self.backward_outputs}
@@ -213,7 +248,7 @@ class Exogenous(Stage):
             return outputs
         else:
             return outputs, Pi.T
-    
+
     def backward_step_shock(self, ss, shocks, precomputed=None):
         Pi = Markov(ss[self.markov_name], self.index)
         outputs = {k: Pi @ shocks[k] for k in self.backward_outputs if k in shocks}
@@ -232,12 +267,24 @@ class Exogenous(Stage):
 
 class LogitChoice(Stage):
     """Stage that does endogenous discrete choice with type 1 extreme value taste shocks"""
-    def __init__(self, value, backward, index, taste_shock_scale, f=None, name=None, hetoutputs=None):
+
+    def __init__(
+        self,
+        value,
+        backward,
+        index,
+        taste_shock_scale,
+        f=None,
+        name=None,
+        hetoutputs=None,
+    ):
         # flow utility function, if present, should return a single output
         if f is not None:
             f = ExtendedFunction(f)
             if not len(f.outputs) == 1:
-                raise ValueError(f'Flow utility function {f.name} returning multiple outputs {f.outputs}')
+                raise ValueError(
+                    f"Flow utility function {f.name} returning multiple outputs {f.outputs}"
+                )
             self.f = f
         else:
             self.f = None
@@ -269,7 +316,7 @@ class LogitChoice(Stage):
 
         # add dimension at beginning to allow for choice, then swap (today's choice determines next stages's state)
         V = V_next[np.newaxis, ...]
-        V = np.swapaxes(V, 0, self.index+1)
+        V = np.swapaxes(V, 0, self.index + 1)
 
         # call f if we have it to get flow utility
         if self.f is not None:
@@ -281,10 +328,10 @@ class LogitChoice(Stage):
             flow_u = np.zeros((nchoice,) + V_next.shape)
 
         V = flow_u + V
-        
+
         # calculate choice probabilities and expected value
         P, EV = logit_choice(V, inputs[self.taste_shock_scale])
-        
+
         # make law of motion, use it to take expectations of everything else
         lom = DiscreteChoice(P, self.index)
 
@@ -304,7 +351,7 @@ class LogitChoice(Stage):
         # this part parallel to backward_step, just with derivatives...
         dV_next = shocks[self.value]
         dV = dV_next[np.newaxis, ...]
-        dV = np.swapaxes(dV, 0, self.index+1)
+        dV = np.swapaxes(dV, 0, self.index + 1)
 
         if f is not None:
             dflow_u = f.diff(shocks)
@@ -312,7 +359,7 @@ class LogitChoice(Stage):
             dflow_u = np.nan_to_num(dflow_u)  # -inf - (-inf) = nan, want zeros
         else:
             dflow_u = np.zeros_like(lom.P)
-        
+
         dV = dflow_u + dV
 
         # simply take expectations to get shock to expected value function (envelope result)
@@ -329,7 +376,7 @@ class LogitChoice(Stage):
             doutputs[k] = dlom.T @ ss[k]
             if k in shocks:
                 doutputs[k] += lom.T @ shocks[k]
-        
+
         return doutputs, dlom
 
     def precompute(self, ss, ss_lawofmotion):

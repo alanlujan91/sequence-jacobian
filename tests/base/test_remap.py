@@ -4,19 +4,19 @@ from sequence_jacobian import simple, solved, combine
 
 @simple
 def matching(theta, ell, kappa):
-    f = theta / (1 + theta ** ell) ** (1 / ell)
+    f = theta / (1 + theta**ell) ** (1 / ell)
     qfill = f / theta
     hiring_cost = kappa / qfill
     return f, qfill, hiring_cost
 
 
-@solved(unknowns={'h': (0, 1)}, targets=['jc_res'])
+@solved(unknowns={"h": (0, 1)}, targets=["jc_res"])
 def job_creation(h, w, beta, s, hiring_cost):
     jc_res = h - w + beta * (1 - s(+1)) * hiring_cost(+1) - hiring_cost
     return jc_res
 
 
-@solved(unknowns={'N': (0.5, 1)}, targets=['N_lom'])
+@solved(unknowns={"N": (0.5, 1)}, targets=["N_lom"])
 def labor_lom(h, w, N, s, qfill, f, theta, hiring_cost):
     N_lom = (1 - s * (1 - f)) * N(-1) + f * (1 - N(-1)) - N
     U = 1 - N
@@ -27,7 +27,9 @@ def labor_lom(h, w, N, s, qfill, f, theta, hiring_cost):
 
 
 @simple
-def dmp_aggregate(U_men, U_women, Div_labor_men, Div_labor_women, vacancy_cost_men, vacancy_cost_women):
+def dmp_aggregate(
+    U_men, U_women, Div_labor_men, Div_labor_women, vacancy_cost_men, vacancy_cost_women
+):
     U = (U_men + U_women) / 2
     Div_labor = (Div_labor_men + Div_labor_women) / 2
     vacancy_cost = (vacancy_cost_men + vacancy_cost_women) / 2
@@ -35,14 +37,14 @@ def dmp_aggregate(U_men, U_women, Div_labor_men, Div_labor_women, vacancy_cost_m
 
 
 def test_remap_combined_block():
-    dmp = combine([matching, job_creation, labor_lom], name='DMP')
-    dmp_men = dmp.rename(suffix='_men')
-    dmp_women = dmp.rename(suffix='_women')
+    dmp = combine([matching, job_creation, labor_lom], name="DMP")
+    dmp_men = dmp.rename(suffix="_men")
+    dmp_women = dmp.rename(suffix="_women")
 
     # remap some inputs and all outputs
-    to_remap = ['theta', 'ell', 's'] + list(dmp_men.outputs)
-    dmp_men = dmp_men.remap({k: k + '_men' for k in to_remap})
-    dmp_women = dmp_women.remap({k: k + '_women' for k in to_remap})
+    to_remap = ["theta", "ell", "s"] + list(dmp_men.outputs)
+    dmp_men = dmp_men.remap({k: k + "_men" for k in to_remap})
+    dmp_women = dmp_women.remap({k: k + "_women" for k in to_remap})
 
     # combine remapped blocks
-    dmp_all = combine([dmp_men, dmp_women, dmp_aggregate], name='dmp_all')
+    dmp_all = combine([dmp_men, dmp_women, dmp_aggregate], name="dmp_all")

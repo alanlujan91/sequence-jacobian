@@ -4,7 +4,9 @@ import numpy as np
 import warnings
 
 
-def newton_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verbose=True):
+def newton_solver(
+    f, x0, y0=None, tol=1e-9, maxcount=100, backtrack_c=0.5, verbose=True
+):
     """Simple line search solver for root x satisfying f(x)=0 using Newton direction.
 
     Backtracks if input invalid or improvement is not at least half the predicted improvement.
@@ -45,26 +47,30 @@ def newton_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verbo
                 ynew = f(x + dx)
             except ValueError:
                 if verbose:
-                    print('backtracking\n')
+                    print("backtracking\n")
                 dx *= backtrack_c
             else:
-                predicted_improvement = -np.sum((J @ dx) * y) * ((1 - 1 / 2 ** bcount) + 1) / 2
-                actual_improvement = (np.sum(y ** 2) - np.sum(ynew ** 2)) / 2
+                predicted_improvement = (
+                    -np.sum((J @ dx) * y) * ((1 - 1 / 2**bcount) + 1) / 2
+                )
+                actual_improvement = (np.sum(y**2) - np.sum(ynew**2)) / 2
                 if actual_improvement < predicted_improvement / 2:
                     if verbose:
-                        print('backtracking\n')
+                        print("backtracking\n")
                     dx *= backtrack_c
                 else:
                     y = ynew
                     x += dx
                     break
         else:
-            raise ValueError('Too many backtracks, maybe bad initial guess?')
+            raise ValueError("Too many backtracks, maybe bad initial guess?")
     else:
-        raise ValueError(f'No convergence after {maxcount} iterations')
+        raise ValueError(f"No convergence after {maxcount} iterations")
 
 
-def broyden_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verbose=True):
+def broyden_solver(
+    f, x0, y0=None, tol=1e-9, maxcount=100, backtrack_c=0.5, verbose=True
+):
     """Similar to newton_solver, but solves f(x)=0 using approximate rather than exact Newton direction,
     obtaining approximate Jacobian J=f'(x) from Broyden updating (starting from exact Newton at f'(x0)).
 
@@ -90,12 +96,16 @@ def broyden_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verb
         if len(x) == len(y):
             dx = np.linalg.solve(J, -y)
         elif len(x) < len(y):
-            warnings.warn(f"Dimension of x, {len(x)} is less than dimension of y, {len(y)}."
-                          f" Using least-squares criterion to solve for approximate root.")
+            warnings.warn(
+                f"Dimension of x, {len(x)} is less than dimension of y, {len(y)}."
+                f" Using least-squares criterion to solve for approximate root."
+            )
             dx = np.linalg.lstsq(J, -y, rcond=None)[0]
         else:
-            raise ValueError(f"Dimension of x, {len(x)} is greater than dimension of y, {len(y)}."
-                             f" Cannot solve underdetermined system.")
+            raise ValueError(
+                f"Dimension of x, {len(x)} is greater than dimension of y, {len(y)}."
+                f" Cannot solve underdetermined system."
+            )
 
         # backtrack at most 29 times
         for bcount in range(30):
@@ -106,7 +116,7 @@ def broyden_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verb
                 ynew = f(x + dx)
             except ValueError:
                 if verbose:
-                    print('backtracking\n')
+                    print("backtracking\n")
                 dx *= backtrack_c
             else:
                 J = broyden_update(J, dx, ynew - y)
@@ -114,12 +124,12 @@ def broyden_solver(f, x0, y0=None, tol=1E-9, maxcount=100, backtrack_c=0.5, verb
                 x += dx
                 break
         else:
-            raise ValueError('Too many backtracks, maybe bad initial guess?')
+            raise ValueError("Too many backtracks, maybe bad initial guess?")
     else:
-        raise ValueError(f'No convergence after {maxcount} iterations')
+        raise ValueError(f"No convergence after {maxcount} iterations")
 
 
-def obtain_J(f, x, y, h=1E-5):
+def obtain_J(f, x, y, h=1e-5):
     """Finds Jacobian f'(x) around y=f(x)"""
     nx = x.shape[0]
     ny = y.shape[0]
@@ -139,9 +149,9 @@ def broyden_update(J, dx, dy):
 
 def printit(it, x, y, **kwargs):
     """Convenience printing function for verbose iterations"""
-    print(f'On iteration {it}')
-    print(('x = %.3f' + ',%.3f' * (len(x) - 1)) % tuple(x))
-    print(('y = %.3f' + ',%.3f' * (len(y) - 1)) % tuple(y))
+    print(f"On iteration {it}")
+    print(("x = %.3f" + ",%.3f" * (len(x) - 1)) % tuple(x))
+    print(("y = %.3f" + ",%.3f" * (len(y) - 1)) % tuple(y))
     for kw, val in kwargs.items():
-        print(f'{kw} = {val:.3f}')
-    print('\n')
+        print(f"{kw} = {val:.3f}")
+    print("\n")

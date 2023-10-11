@@ -3,8 +3,14 @@
 import numpy as np
 
 from sequence_jacobian.blocks.support.simple_displacement import (
-    IgnoreInt, IgnoreFloat, IgnoreVector, Displace, AccumulatedDerivative, numeric_primitive
+    IgnoreInt,
+    IgnoreFloat,
+    IgnoreVector,
+    Displace,
+    AccumulatedDerivative,
+    numeric_primitive,
 )
+
 
 # Define useful helper functions for testing
 # Assumes "op" is an actual well-defined arithmetic operator. If necessary, implement more stringent checks
@@ -27,8 +33,10 @@ def apply_binary_op(op, a1, a2):
     elif getattr(a2, reverse_op(op))(a1) is not NotImplemented:
         return getattr(a2, reverse_op(op))(a1)
     else:
-        raise NotImplementedError(f"{op} cannot be performed between {a1} and {a2} directly, and no"
-                                  f" valid reverse operation exists either.")
+        raise NotImplementedError(
+            f"{op} cannot be performed between {a1} and {a2} directly, and no"
+            f" valid reverse operation exists either."
+        )
 
 
 def apply_op(op, *args):
@@ -37,8 +45,10 @@ def apply_op(op, *args):
     elif len(args) == 2:
         return apply_binary_op(op, *args)
     else:
-        raise ValueError(f"apply_op only supports unary or binary operators currently. {len(args)} is an invalid"
-                         f" number of arguments to provide.")
+        raise ValueError(
+            f"apply_op only supports unary or binary operators currently. {len(args)} is an invalid"
+            f" number of arguments to provide."
+        )
 
 
 def test_ignore():
@@ -47,12 +57,21 @@ def test_ignore():
     for t1 in arg_singles:
         for op in ["__neg__", "__pos__"]:
             assert type(apply_op(op, t1)) == type(t1)
-            assert np.all(numeric_primitive(apply_op(op, t1)) == apply_op(op, numeric_primitive(t1)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1))
+                == apply_op(op, numeric_primitive(t1))
+            )
 
     # Test binary operations
-    arg_pairs = [(IgnoreInt(1), 1), (1, IgnoreInt(1)), (IgnoreInt(1), IgnoreInt(2)),
-                 (IgnoreInt(1)(-1), 1), (1, IgnoreInt(1)(-1)),
-                 (IgnoreInt(1)(-1), IgnoreInt(2)), (IgnoreInt(1), IgnoreInt(2)(-1))]
+    arg_pairs = [
+        (IgnoreInt(1), 1),
+        (1, IgnoreInt(1)),
+        (IgnoreInt(1), IgnoreInt(2)),
+        (IgnoreInt(1)(-1), 1),
+        (1, IgnoreInt(1)(-1)),
+        (IgnoreInt(1)(-1), IgnoreInt(2)),
+        (IgnoreInt(1), IgnoreInt(2)(-1)),
+    ]
     for pair in arg_pairs:
         t1, t2 = pair
         for op in ["__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__"]:
@@ -64,22 +83,46 @@ def test_ignore():
             # E.g. when t1 = 1, t2 = IgnoreInt(1), t1.__radd__(t2) will return an int not an IgnoreInt; however
             # in practice when the actual expression is w ritten as t2 + t1, t2.__add__(t1) will be checked first
             # and will be deemed valid, returning an IgnoreInt
-            if op in ["__radd__", "__rsub__", "__rmul__"] and not (type(t1) == int and type(t2) == IgnoreInt):
+            if op in ["__radd__", "__rsub__", "__rmul__"] and not (
+                type(t1) == int and type(t2) == IgnoreInt
+            ):
                 assert type(apply_op(op, t1, t2)) == IgnoreInt
-            assert np.all(numeric_primitive(apply_op(op, t1, t2)) == apply_op(op, numeric_primitive(t1),
-                                                                              numeric_primitive(t2)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1, t2))
+                == apply_op(op, numeric_primitive(t1), numeric_primitive(t2))
+            )
 
-    arg_pairs = [(IgnoreFloat(1), 1), (1, IgnoreFloat(1)), (IgnoreFloat(1), IgnoreFloat(2)),
-                 (IgnoreFloat(1)(-1), 1), (1, IgnoreFloat(1)(-1)),
-                 (IgnoreFloat(1)(-1), IgnoreFloat(2)), (IgnoreFloat(1), IgnoreFloat(2)(-1))]
+    arg_pairs = [
+        (IgnoreFloat(1), 1),
+        (1, IgnoreFloat(1)),
+        (IgnoreFloat(1), IgnoreFloat(2)),
+        (IgnoreFloat(1)(-1), 1),
+        (1, IgnoreFloat(1)(-1)),
+        (IgnoreFloat(1)(-1), IgnoreFloat(2)),
+        (IgnoreFloat(1), IgnoreFloat(2)(-1)),
+    ]
     for pair in arg_pairs:
         t1, t2 = pair
-        for op in ["__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__",
-                   "__truediv__", "__rtruediv__", "__pow__", "__rpow__"]:
-            if op in ["__radd__", "__rsub__", "__rmul__", "__rpow__"] and not (type(t1) == float and type(t2) == IgnoreFloat):
+        for op in [
+            "__add__",
+            "__radd__",
+            "__sub__",
+            "__rsub__",
+            "__mul__",
+            "__rmul__",
+            "__truediv__",
+            "__rtruediv__",
+            "__pow__",
+            "__rpow__",
+        ]:
+            if op in ["__radd__", "__rsub__", "__rmul__", "__rpow__"] and not (
+                type(t1) == float and type(t2) == IgnoreFloat
+            ):
                 assert type(apply_op(op, t1, t2)) == IgnoreFloat
-            assert np.all(numeric_primitive(apply_op(op, t1, t2)) == apply_op(op, numeric_primitive(t1),
-                                                                              numeric_primitive(t2)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1, t2))
+                == apply_op(op, numeric_primitive(t1), numeric_primitive(t2))
+            )
 
     # Test call
     for t1 in arg_singles:
@@ -88,32 +131,51 @@ def test_ignore():
 
 def test_ignore_vector():
     # Test unary operations
-    arg_singles = [IgnoreVector(np.array([1, 2, 3])), IgnoreVector(np.array([1, 2, 3]))(-1)]
+    arg_singles = [
+        IgnoreVector(np.array([1, 2, 3])),
+        IgnoreVector(np.array([1, 2, 3]))(-1),
+    ]
     for t1 in arg_singles:
         for op in ["__neg__", "__pos__"]:
             assert type(apply_op(op, t1)) == IgnoreVector
-            assert np.all(numeric_primitive(apply_op(op, t1)) == apply_op(op, numeric_primitive(t1)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1))
+                == apply_op(op, numeric_primitive(t1))
+            )
 
     # Test binary operations
-    arg_pairs = [(IgnoreVector(np.array([1, 2, 3])), 1),
-                 (IgnoreVector(np.array([1, 2, 3])), IgnoreFloat(1)),
-                 (IgnoreVector(np.array([1, 2, 3])), IgnoreVector(np.array([2, 3, 4]))),
-                 (1, IgnoreVector(np.array([1, 2, 3]))),
-                 (IgnoreFloat(1), IgnoreVector(np.array([1, 2, 3]))),
-
-                 (IgnoreVector(np.array([1, 2, 3]))(-1), 1),
-                 (IgnoreVector(np.array([1, 2, 3]))(-1), IgnoreFloat(1)),
-                 (IgnoreVector(np.array([1, 2, 3]))(-1), IgnoreVector(np.array([2, 3, 4]))),
-                 (IgnoreVector(np.array([1, 2, 3])), IgnoreVector(np.array([2, 3, 4]))(-1)),
-                 (1, IgnoreVector(np.array([1, 2, 3]))(-1)),
-                 (IgnoreFloat(1), IgnoreVector(np.array([1, 2, 3]))(-1))]
+    arg_pairs = [
+        (IgnoreVector(np.array([1, 2, 3])), 1),
+        (IgnoreVector(np.array([1, 2, 3])), IgnoreFloat(1)),
+        (IgnoreVector(np.array([1, 2, 3])), IgnoreVector(np.array([2, 3, 4]))),
+        (1, IgnoreVector(np.array([1, 2, 3]))),
+        (IgnoreFloat(1), IgnoreVector(np.array([1, 2, 3]))),
+        (IgnoreVector(np.array([1, 2, 3]))(-1), 1),
+        (IgnoreVector(np.array([1, 2, 3]))(-1), IgnoreFloat(1)),
+        (IgnoreVector(np.array([1, 2, 3]))(-1), IgnoreVector(np.array([2, 3, 4]))),
+        (IgnoreVector(np.array([1, 2, 3])), IgnoreVector(np.array([2, 3, 4]))(-1)),
+        (1, IgnoreVector(np.array([1, 2, 3]))(-1)),
+        (IgnoreFloat(1), IgnoreVector(np.array([1, 2, 3]))(-1)),
+    ]
     for pair in arg_pairs:
         t1, t2 = pair
-        for op in ["__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__",
-                   "__truediv__", "__rtruediv__", "__pow__", "__rpow__"]:
+        for op in [
+            "__add__",
+            "__radd__",
+            "__sub__",
+            "__rsub__",
+            "__mul__",
+            "__rmul__",
+            "__truediv__",
+            "__rtruediv__",
+            "__pow__",
+            "__rpow__",
+        ]:
             assert type(apply_op(op, t1, t2)) == IgnoreVector
-            assert np.all(numeric_primitive(apply_op(op, t1, t2)) == apply_op(op, numeric_primitive(t1),
-                                                                              numeric_primitive(t2)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1, t2))
+                == apply_op(op, numeric_primitive(t1), numeric_primitive(t2))
+            )
 
     # Test call
     for t1 in arg_singles:
@@ -124,35 +186,59 @@ def test_displace():
     # TODO: test ss_initial being different from ss
 
     # Test unary operations
-    arg_singles = [Displace(np.array([1, 2, 3]), 2, 2), Displace(np.array([1, 2, 3]), 2, 2)(-1)]
+    arg_singles = [
+        Displace(np.array([1, 2, 3]), 2, 2),
+        Displace(np.array([1, 2, 3]), 2, 2)(-1),
+    ]
     for t1 in arg_singles:
         for op in ["__neg__", "__pos__"]:
             assert type(apply_op(op, t1)) == Displace
-            assert np.all(numeric_primitive(apply_op(op, t1)) == apply_op(op, numeric_primitive(t1)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1))
+                == apply_op(op, numeric_primitive(t1))
+            )
 
     # Test binary operations
-    arg_pairs = [(Displace(np.array([1, 2, 3]), 2, 2), 1),
-                 (Displace(np.array([1, 2, 3]), 2, 2), IgnoreFloat(1)),
-                 (Displace(np.array([1, 2, 3]), 2, 2), Displace(np.array([2, 3, 4]), 3, 3)),
-                 (1, Displace(np.array([1, 2, 3]), 2, 2)),
-                 (IgnoreFloat(1), Displace(np.array([1, 2, 3]), 2, 2)),
-
-                 (Displace(np.array([1, 2, 3]), 2, 2)(-1), 1),
-                 (Displace(np.array([1, 2, 3]), 2, 2)(-1), IgnoreFloat(1)),
-                 (Displace(np.array([1, 2, 3]), 2, 2)(-1), Displace(np.array([2, 3, 4]), 3, 3)),
-                 (Displace(np.array([1, 2, 3]), 2, 2), Displace(np.array([2, 3, 4]), 3, 3)(-1)),
-                 (1, Displace(np.array([1, 2, 3]), 2, 2)(-1)),
-                 (IgnoreFloat(1), Displace(np.array([1, 2, 3]), 2, 2)(-1))]
+    arg_pairs = [
+        (Displace(np.array([1, 2, 3]), 2, 2), 1),
+        (Displace(np.array([1, 2, 3]), 2, 2), IgnoreFloat(1)),
+        (Displace(np.array([1, 2, 3]), 2, 2), Displace(np.array([2, 3, 4]), 3, 3)),
+        (1, Displace(np.array([1, 2, 3]), 2, 2)),
+        (IgnoreFloat(1), Displace(np.array([1, 2, 3]), 2, 2)),
+        (Displace(np.array([1, 2, 3]), 2, 2)(-1), 1),
+        (Displace(np.array([1, 2, 3]), 2, 2)(-1), IgnoreFloat(1)),
+        (Displace(np.array([1, 2, 3]), 2, 2)(-1), Displace(np.array([2, 3, 4]), 3, 3)),
+        (Displace(np.array([1, 2, 3]), 2, 2), Displace(np.array([2, 3, 4]), 3, 3)(-1)),
+        (1, Displace(np.array([1, 2, 3]), 2, 2)(-1)),
+        (IgnoreFloat(1), Displace(np.array([1, 2, 3]), 2, 2)(-1)),
+    ]
     for pair in arg_pairs:
         t1, t2 = pair
-        for op in ["__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__",
-                   "__truediv__", "__rtruediv__", "__pow__", "__rpow__"]:
+        for op in [
+            "__add__",
+            "__radd__",
+            "__sub__",
+            "__rsub__",
+            "__mul__",
+            "__rmul__",
+            "__truediv__",
+            "__rtruediv__",
+            "__pow__",
+            "__rpow__",
+        ]:
             assert type(apply_op(op, t1, t2)) == Displace
-            assert np.all(numeric_primitive(apply_op(op, t1, t2)) == apply_op(op, numeric_primitive(t1),
-                                                                              numeric_primitive(t2)))
-            assert np.all(numeric_primitive(apply_op(op, t1, t2).ss) ==\
-                   apply_op(op, t1.ss if isinstance(t1, Displace) else numeric_primitive(t1),
-                            t2.ss if isinstance(t2, Displace) else numeric_primitive(t2)))
+            assert np.all(
+                numeric_primitive(apply_op(op, t1, t2))
+                == apply_op(op, numeric_primitive(t1), numeric_primitive(t2))
+            )
+            assert np.all(
+                numeric_primitive(apply_op(op, t1, t2).ss)
+                == apply_op(
+                    op,
+                    t1.ss if isinstance(t1, Displace) else numeric_primitive(t1),
+                    t2.ss if isinstance(t2, Displace) else numeric_primitive(t2),
+                )
+            )
 
     # Test call
     for t1 in arg_singles:
@@ -161,86 +247,169 @@ def test_displace():
         t1_manual_displace[-1:] = t1.ss
         assert np.all(numeric_primitive(t1(1)) == t1_manual_displace)
 
+
 def test_accumulated_derivative():
     # Test unary operations
-    arg_singles = [AccumulatedDerivative(), AccumulatedDerivative()(-1), AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)]
+    arg_singles = [
+        AccumulatedDerivative(),
+        AccumulatedDerivative()(-1),
+        AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0),
+    ]
     for t1 in arg_singles:
         for op in ["__neg__", "__pos__"]:
             assert type(apply_op(op, t1)) == AccumulatedDerivative
-            assert np.all(np.fromiter(apply_op(op, t1).elements.values(), dtype=float) ==
-                          np.array([apply_op(op, v) for v in t1.elements.values()]))
+            assert np.all(
+                np.fromiter(apply_op(op, t1).elements.values(), dtype=float)
+                == np.array([apply_op(op, v) for v in t1.elements.values()])
+            )
 
     # TODO: Only test against scalars as of now. Will need to revisit this to test against vectors
     #   e.g. IgnoreVector, once hetinput/hetoutput functionality is enhanced
     # Test binary operations
-    arg_pairs = [(AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.), 3),
-                 (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.), IgnoreFloat(3)),
-                 (3, AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)),
-                 (IgnoreFloat(3), AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)),
-                 (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.),
-                  AccumulatedDerivative(elements={(1, 1): 4.}, f_value=5.)),
-                 # TODO: Implement test for elements not in the same (i, m)
-                 # (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.),
-                 #  AccumulatedDerivative(elements={(1, 0): 4.}, f_value=5.)),
-
-                 (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)(-1), 3),
-                 (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)(-1), IgnoreFloat(3)),
-                 (3, AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)(-1)),
-                 (IgnoreFloat(3), AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.)(-1))]
+    arg_pairs = [
+        (AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0), 3),
+        (AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0), IgnoreFloat(3)),
+        (3, AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)),
+        (IgnoreFloat(3), AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)),
+        (
+            AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0),
+            AccumulatedDerivative(elements={(1, 1): 4.0}, f_value=5.0),
+        ),
+        # TODO: Implement test for elements not in the same (i, m)
+        # (AccumulatedDerivative(elements={(1, 1): 2.}, f_value=2.),
+        #  AccumulatedDerivative(elements={(1, 0): 4.}, f_value=5.)),
+        (AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)(-1), 3),
+        (
+            AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)(-1),
+            IgnoreFloat(3),
+        ),
+        (3, AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)(-1)),
+        (
+            IgnoreFloat(3),
+            AccumulatedDerivative(elements={(1, 1): 2.0}, f_value=2.0)(-1),
+        ),
+    ]
 
     def get_fp_value(x):
         return x._fp_values[0]
 
     for pair in arg_pairs:
         t1, t2 = pair
-        for op in ["__add__", "__radd__", "__sub__", "__rsub__", "__mul__", "__rmul__",
-                   "__truediv__", "__rtruediv__", "__pow__", "__rpow__"]:
-
+        for op in [
+            "__add__",
+            "__radd__",
+            "__sub__",
+            "__rsub__",
+            "__mul__",
+            "__rmul__",
+            "__truediv__",
+            "__rtruediv__",
+            "__pow__",
+            "__rpow__",
+        ]:
             assert type(apply_op(op, t1, t2)) == AccumulatedDerivative
 
             result = get_fp_value(apply_op(op, t1, t2))
 
-            if isinstance(t1, AccumulatedDerivative) and isinstance(t2, AccumulatedDerivative):
-                assert apply_op(op, t1, t2).f_value == apply_op(op, t1.f_value, t2.f_value)
+            if isinstance(t1, AccumulatedDerivative) and isinstance(
+                t2, AccumulatedDerivative
+            ):
+                assert apply_op(op, t1, t2).f_value == apply_op(
+                    op, t1.f_value, t2.f_value
+                )
 
                 if op in ["__add__", "__radd__", "__sub__", "__rsub__"]:
                     assert result == apply_op(op, get_fp_value(t1), get_fp_value(t2))
                 elif op in ["__mul__", "__rmul__"]:
-                    assert result == get_fp_value(t1) * t2.f_value + t1.f_value * get_fp_value(t2)
+                    assert result == get_fp_value(
+                        t1
+                    ) * t2.f_value + t1.f_value * get_fp_value(t2)
                 elif op == "__truediv__":
-                    assert result == (t2.f_value * get_fp_value(t1) - t1.f_value * get_fp_value(t2))/t2.f_value**2
+                    assert (
+                        result
+                        == (
+                            t2.f_value * get_fp_value(t1)
+                            - t1.f_value * get_fp_value(t2)
+                        )
+                        / t2.f_value**2
+                    )
                 elif op == "__rtruediv__":
-                    assert result == (t1.f_value * get_fp_value(t2) - t2.f_value * get_fp_value(t1))/t1.f_value**2
+                    assert (
+                        result
+                        == (
+                            t1.f_value * get_fp_value(t2)
+                            - t2.f_value * get_fp_value(t1)
+                        )
+                        / t1.f_value**2
+                    )
                 elif op == "__pow__":
-                    assert result == (t1.f_value ** (t2.f_value - 1)) * (t2.f_value * get_fp_value(t1) +\
-                                                               t1.f_value * np.log(t1.f_value) * get_fp_value(t2))
+                    assert result == (t1.f_value ** (t2.f_value - 1)) * (
+                        t2.f_value * get_fp_value(t1)
+                        + t1.f_value * np.log(t1.f_value) * get_fp_value(t2)
+                    )
                 else:  # op == "__rpow__":
-                    assert result == (t2.f_value ** (t1.f_value - 1)) * (t1.f_value * get_fp_value(t2) +\
-                                                               t2.f_value * np.log(t2.f_value) * get_fp_value(t1))
+                    assert result == (t2.f_value ** (t1.f_value - 1)) * (
+                        t1.f_value * get_fp_value(t2)
+                        + t2.f_value * np.log(t2.f_value) * get_fp_value(t1)
+                    )
             else:
-                assert apply_op(op, t1, t2).f_value == apply_op(op, t1.f_value, numeric_primitive(t2))\
-                    if isinstance(t1, AccumulatedDerivative) else apply_op(op, numeric_primitive(t1), t2.f_value)
+                assert (
+                    apply_op(op, t1, t2).f_value
+                    == apply_op(op, t1.f_value, numeric_primitive(t2))
+                    if isinstance(t1, AccumulatedDerivative)
+                    else apply_op(op, numeric_primitive(t1), t2.f_value)
+                )
 
                 if op in ["__add__", "__radd__", "__sub__"]:
-                    assert result == get_fp_value(t1) if\
-                        isinstance(t1, AccumulatedDerivative) else get_fp_value(t2)
+                    assert (
+                        result == get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else get_fp_value(t2)
+                    )
                 elif op == "__rsub__":
-                    assert result == -get_fp_value(t1) if \
-                        isinstance(t1, AccumulatedDerivative) else -get_fp_value(t2)
+                    assert (
+                        result == -get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else -get_fp_value(t2)
+                    )
                 elif op in ["__mul__", "__rmul__"]:
-                    assert result == numeric_primitive(t2) * get_fp_value(t1)\
-                        if isinstance(t1, AccumulatedDerivative) else numeric_primitive(t1) * get_fp_value(t2)
+                    assert (
+                        result == numeric_primitive(t2) * get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else numeric_primitive(t1) * get_fp_value(t2)
+                    )
                 elif op == "__truediv__":
-                    assert result == get_fp_value(t1)/numeric_primitive(t2) if isinstance(t1, AccumulatedDerivative)\
-                        else -numeric_primitive(t1)/t2.f_value**2 * get_fp_value(t2)
+                    assert (
+                        result == get_fp_value(t1) / numeric_primitive(t2)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else -numeric_primitive(t1) / t2.f_value**2 * get_fp_value(t2)
+                    )
                 elif op == "__rtruediv__":
-                    assert result == -numeric_primitive(t2)/t1.f_value**2 * get_fp_value(t1)\
-                        if isinstance(t1, AccumulatedDerivative) else get_fp_value(t2)/numeric_primitive(t1)
+                    assert (
+                        result
+                        == -numeric_primitive(t2) / t1.f_value**2 * get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else get_fp_value(t2) / numeric_primitive(t1)
+                    )
                 elif op == "__pow__":
-                    assert result == numeric_primitive(t2) * t1.f_value ** (numeric_primitive(t2) - 1) * get_fp_value(t1)\
-                        if isinstance(t1, AccumulatedDerivative) else\
-                        np.log(numeric_primitive(t1)) * numeric_primitive(t1) ** t2.f_value * get_fp_value(t2)
+                    assert (
+                        result
+                        == numeric_primitive(t2)
+                        * t1.f_value ** (numeric_primitive(t2) - 1)
+                        * get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else np.log(numeric_primitive(t1))
+                        * numeric_primitive(t1) ** t2.f_value
+                        * get_fp_value(t2)
+                    )
                 else:  # op == "__rpow__"
-                    assert result == np.log(numeric_primitive(t2)) * numeric_primitive(t2) ** t1.f_value * get_fp_value(t1)\
-                        if isinstance(t1, AccumulatedDerivative) else\
-                        numeric_primitive(t1) * t2.f_value ** (numeric_primitive(t1) - 1) * get_fp_value(t2)
+                    assert (
+                        result
+                        == np.log(numeric_primitive(t2))
+                        * numeric_primitive(t2) ** t1.f_value
+                        * get_fp_value(t1)
+                        if isinstance(t1, AccumulatedDerivative)
+                        else numeric_primitive(t1)
+                        * t2.f_value ** (numeric_primitive(t1) - 1)
+                        * get_fp_value(t2)
+                    )

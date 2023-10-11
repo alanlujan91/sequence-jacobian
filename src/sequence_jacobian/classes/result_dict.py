@@ -2,17 +2,20 @@ import copy
 
 from ..utilities.bijection import Bijection
 
+
 class ResultDict:
     def __init__(self, data, internals=None):
         if isinstance(data, ResultDict):
             if internals is not None:
-                raise ValueError(f'Supplying {type(self).__name__} and also internals to constructor not allowed')
+                raise ValueError(
+                    f"Supplying {type(self).__name__} and also internals to constructor not allowed"
+                )
             self.toplevel = data.toplevel.copy()
             self.internals = data.internals.copy()
         else:
             self.toplevel: dict = data.copy()
             self.internals: dict = {} if internals is None else internals.copy()
-        
+
     def __repr__(self):
         if self.internals:
             return f"<{type(self).__name__}: {list(self.toplevel.keys())}, internals={list(self.internals.keys())}>"
@@ -26,13 +29,15 @@ class ResultDict:
         if isinstance(k, str):
             return self.toplevel[k]
         elif isinstance(k, tuple):
-            raise TypeError(f'Key {k} to {type(self).__name__} cannot be tuple')
+            raise TypeError(f"Key {k} to {type(self).__name__} cannot be tuple")
         else:
             try:
                 return type(self)({ki: self.toplevel[ki] for ki in k}, **kwargs)
             except TypeError:
-                raise TypeError(f'Key {k} to {type(self).__name__} needs to be a string or an iterable (list, set, etc) of strings')
-    
+                raise TypeError(
+                    f"Key {k} to {type(self).__name__} needs to be a string or an iterable (list, set, etc) of strings"
+                )
+
     def __setitem__(self, k, v):
         self.toplevel[k] = v
 
@@ -44,7 +49,7 @@ class ResultDict:
             return new
         else:
             return NotImplemented
-    
+
     def __rmatmul__(self, x):
         return self.__matmul__(x)
 
@@ -53,7 +58,9 @@ class ResultDict:
 
     def __or__(self, other):
         if not isinstance(other, type(self)):
-            raise ValueError(f'Trying to merge a {type(self).__name__} with a {type(other).__name__}.')
+            raise ValueError(
+                f"Trying to merge a {type(self).__name__} with a {type(other).__name__}."
+            )
         merged = self.copy()
         merged.update(other)
         return merged
@@ -73,6 +80,6 @@ class ResultDict:
             self.internals.update(rdict.internals)
         else:
             self.toplevel.update(dict(rdict))
-    
+
     def copy(self):
         return type(self)(self)

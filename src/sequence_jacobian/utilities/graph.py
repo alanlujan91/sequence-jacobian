@@ -2,18 +2,23 @@
 from .ordered_set import OrderedSet
 from .bijection import Bijection
 
+
 class DAG:
     """Represents "blocks" that each have inputs and outputs, where output-input relationships between
     blocks form a DAG. Fundamental DAG object intended to underlie CombinedBlock and CombinedExtendedFunction.
-    
+
     Initialized with list of blocks, which are then topologically sorted"""
-    
+
     def __init__(self, blocks):
         inmap = get_input_map(blocks)
         outmap = get_output_map(blocks)
         adj = get_block_adjacency_list(blocks, inmap)
         revadj = get_block_reverse_adjacency_list(blocks, outmap)
-        topsort = topological_sort(adj, revadj, names=[getattr(block, 'name', '[NO BLOCK NAME]') for block in blocks])
+        topsort = topological_sort(
+            adj,
+            revadj,
+            names=[getattr(block, "name", "[NO BLOCK NAME]") for block in blocks],
+        )
 
         M = Bijection({t: i for i, t in enumerate(topsort)})
 
@@ -82,9 +87,13 @@ def topological_sort(adj, revadj, names=None):
     # should be done: topsorted should be topologically sorted with same # of elements as original graphs!
     if len(topsorted) != len(dep):
         cycle_ints = find_cycle(dep, set(range(len(dep))) - set(topsorted))
-        assert cycle_ints is not None, 'topological sort failed but no cycle, THIS SHOULD NEVER EVER HAPPEN'
+        assert (
+            cycle_ints is not None
+        ), "topological sort failed but no cycle, THIS SHOULD NEVER EVER HAPPEN"
         cycle = [names[i] for i in cycle_ints] if names else cycle_ints
-        raise Exception(f'Topological sort failed: cyclic dependency {" -> ".join([str(n) for n in cycle])}')
+        raise Exception(
+            f'Topological sort failed: cyclic dependency {" -> ".join([str(n) for n in cycle])}'
+        )
 
     return topsorted
 
@@ -106,7 +115,7 @@ def get_output_map(blocks: list):
     for num, block in enumerate(blocks):
         for o in block.outputs:
             if o in outmap:
-                raise ValueError(f'{o} is output twice')
+                raise ValueError(f"{o} is output twice")
             outmap[o] = num
 
     return outmap
@@ -145,7 +154,7 @@ def find_intermediate_inputs(blocks):
     required = OrderedSet()
     outmap = get_output_map(blocks)
     for num, block in enumerate(blocks):
-        if hasattr(block, 'inputs'):
+        if hasattr(block, "inputs"):
             inputs = block.inputs
         else:
             inputs = OrderedSet(i for o in block for i in block[o])

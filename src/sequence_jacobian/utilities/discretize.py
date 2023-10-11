@@ -7,10 +7,10 @@ from scipy.stats import norm
 def asset_grid(amin, amax, n):
     # find maximum ubar of uniform grid corresponding to desired maximum amax of asset grid
     ubar = np.log(1 + np.log(1 + amax - amin))
-    
+
     # make uniform grid
     u_grid = np.linspace(0, ubar, n)
-    
+
     # double-exponentiate uniform grid and add amin to get grid from amin to amax
     return amin + np.exp(np.exp(u_grid) - 1) - 1
 
@@ -24,12 +24,12 @@ def agrid(amax, n, amin=0):
 
 
 # TODO: Temporarily include the old way of constructing grids from ikc_old for comparability of results
-def agrid_old(amax, N, amin=0, frac=1/25):
+def agrid_old(amax, N, amin=0, frac=1 / 25):
     """crappy discretization method we've been using, generates N point
     log-spaced grid between bmin and bmax, choosing pivot such that 'frac' of
     total log space between log(1+amin) and log(1+amax) beneath it"""
-    apivot = (1+amin)**(1-frac)*(1+amax)**frac - 1
-    a = np.geomspace(amin+apivot,amax+apivot,N) - apivot
+    apivot = (1 + amin) ** (1 - frac) * (1 + amax) ** frac - 1
+    a = np.geomspace(amin + apivot, amax + apivot, N) - apivot
     a[0] = amin
     return a
 
@@ -39,11 +39,11 @@ def nonlinspace(amax, n, phi, amin=0):
     a_grid = np.zeros(n)
     a_grid[0] = amin
     for i in range(1, n):
-        a_grid[i] = a_grid[i-1] + (amax - a_grid[i-1]) / (n-i)**phi 
+        a_grid[i] = a_grid[i - 1] + (amax - a_grid[i - 1]) / (n - i) ** phi
     return a_grid
 
 
-def stationary(Pi, pi_seed=None, tol=1E-11, maxit=10_000):
+def stationary(Pi, pi_seed=None, tol=1e-11, maxit=10_000):
     """Find invariant distribution of a Markov chain by iteration."""
     if pi_seed is None:
         pi = np.ones(Pi.shape[0]) / Pi.shape[0]
@@ -56,7 +56,7 @@ def stationary(Pi, pi_seed=None, tol=1E-11, maxit=10_000):
             break
         pi = pi_new
     else:
-        raise ValueError(f'No convergence after {maxit} forward iterations!')
+        raise ValueError(f"No convergence after {maxit} forward iterations!")
     pi = pi_new
 
     return pi
@@ -107,19 +107,20 @@ def markov_tauchen(rho, sigma, N=7, m=3, normalize=True):
     # make normalized grid, start with cross-sectional sd of 1
     s = np.linspace(-m, m, N)
     ds = s[1] - s[0]
-    sd_innov = np.sqrt(1 - rho ** 2)
+    sd_innov = np.sqrt(1 - rho**2)
 
     # standard Tauchen method to generate Pi given N and m
     Pi = np.empty((N, N))
     Pi[:, 0] = norm.cdf(s[0] - rho * s + ds / 2, scale=sd_innov)
     Pi[:, -1] = 1 - norm.cdf(s[-1] - rho * s - ds / 2, scale=sd_innov)
     for j in range(1, N - 1):
-        Pi[:, j] = (norm.cdf(s[j] - rho * s + ds / 2, scale=sd_innov) -
-                    norm.cdf(s[j] - rho * s - ds / 2, scale=sd_innov))
+        Pi[:, j] = norm.cdf(s[j] - rho * s + ds / 2, scale=sd_innov) - norm.cdf(
+            s[j] - rho * s - ds / 2, scale=sd_innov
+        )
 
     # invariant distribution and scaling
     pi = stationary(Pi)
-    s *= (sigma / np.sqrt(variance(s, pi)))
+    s *= sigma / np.sqrt(variance(s, pi))
     if normalize:
         y = np.exp(s) / np.sum(pi * np.exp(s))
     else:
@@ -153,7 +154,7 @@ def markov_rouwenhorst(rho, sigma, N=7):
     # invariant distribution and scaling
     pi = stationary(Pi)
     s = np.linspace(-1, 1, N)
-    s *= (sigma / np.sqrt(variance(s, pi)))
+    s *= sigma / np.sqrt(variance(s, pi))
     y = np.exp(s) / np.sum(pi * np.exp(s))
 
     return y, pi, Pi

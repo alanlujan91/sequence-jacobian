@@ -1,11 +1,12 @@
 from typing import Iterable
 
+
 class OrderedSet:
     """Ordered set implemented as dict (where key insertion order is preserved) mapping all to None.
-    
+
     Operations on multiple ordered sets (e.g. union) order all members of first argument first, then
     second argument. If a member is in both, order is as early as possible.
-    
+
     See test_misc_support.test_ordered_set() for examples."""
 
     def __init__(self, members: Iterable = []):
@@ -37,7 +38,7 @@ class OrderedSet:
 
     def add(self, x):
         self.d[x] = None
-    
+
     def difference(self, s):
         return OrderedSet(k for k in self if k not in s)
 
@@ -47,7 +48,7 @@ class OrderedSet:
 
     def discard(self, k):
         self.d.pop(k, None)
-    
+
     def intersection(self, s):
         return OrderedSet(k for k in self if k in s)
 
@@ -57,13 +58,13 @@ class OrderedSet:
 
     def isdisjoint(self, s):
         return len(self.intersection(s)) == 0
-    
+
     def issubset(self, s):
         return len(self.difference(s)) == 0
 
     def issuperset(self, s):
         return len(self.intersection(s)) == len(s)
-    
+
     def remove(self, k):
         self.d.pop(k)
 
@@ -80,12 +81,12 @@ class OrderedSet:
 
     def union(self, s):
         return self.copy().update(s)
-    
+
     def update(self, s):
         for k in s:
             self.add(k)
         return self
-    
+
     def copy(self):
         return OrderedSet(self)
 
@@ -94,10 +95,10 @@ class OrderedSet:
             return list(self) == list(s)
         else:
             return False
-    
+
     def __le__(self, s):
         return self.issubset(s)
-    
+
     def __lt__(self, s):
         return self.issubset(s) and (len(self) != len(s))
 
@@ -118,7 +119,7 @@ class OrderedSet:
 
     def __and__(self, s):
         return self.intersection(s)
-    
+
     def __iand__(self, s):
         return self.intersection_update(s)
 

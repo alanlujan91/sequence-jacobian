@@ -23,21 +23,25 @@ def numeric_primitive(instance):
         if np.issubdtype(instance.dtype, np.number):
             return np.array(instance)
         else:
-            raise ValueError(f"The tuple/list argument provided to numeric_primitive has dtype: {instance.dtype},"
-                             f" which is not a valid numeric type.")
+            raise ValueError(
+                f"The tuple/list argument provided to numeric_primitive has dtype: {instance.dtype},"
+                f" which is not a valid numeric type."
+            )
     elif type(instance) in {tuple, list}:
         instance_array = np.asarray(instance)
         if np.issubdtype(instance_array.dtype, np.number):
             return type(instance)(instance_array)
         else:
-            raise ValueError(f"The tuple/list argument provided to numeric_primitive has dtype: {instance_array.dtype},"
-                             f" which is not a valid numeric type.")
+            raise ValueError(
+                f"The tuple/list argument provided to numeric_primitive has dtype: {instance_array.dtype},"
+                f" which is not a valid numeric type."
+            )
     else:
         return instance.real if np.isscalar(instance) else instance.base
 
 
 def demean(x):
-    return x - x.sum()/x.size
+    return x - x.sum() / x.size
 
 
 # simpler aliases for LU factorization and solution
@@ -102,10 +106,10 @@ def smart_zeros(n):
     if n > 1:
         return np.zeros(n)
     else:
-        return 0.
+        return 0.0
 
 
-'''Tools for taste shocks used in discrete choice problems'''
+"""Tools for taste shocks used in discrete choice problems"""
 
 
 def logit(V, scale):
@@ -121,7 +125,7 @@ def logsum(V, scale):
     const = V.max(axis=0)
     Vnorm = V - const
     EV = const + scale * np.log(np.exp(Vnorm / scale).sum(axis=0))
-    return EV 
+    return EV
 
 
 def logit_choice(V, scale):
@@ -136,14 +140,14 @@ def logit_choice(V, scale):
     return P, EV
 
 
-@guvectorize(['void(float64[:], uint32[:], uint32[:])'], '(nA) -> (),()', nopython=True)
+@guvectorize(["void(float64[:], uint32[:], uint32[:])"], "(nA) -> (),()", nopython=True)
 def nonconcave(Va, ilower, iupper):
     """
     Let V(..., a) be the value function associated with a non-convex dynamic program. `Va` is its derivative with respect to the **single** continuous state variable `a`.
 
     Find ilower and iupper such that {a_{ilower + 1}, ..., a_{iupper - 1}} is the region where V is non-concave.
-    
-    Reference: Fella (2014): A generalized endogenous grid method for non-smooth and non-concave problems 
+
+    Reference: Fella (2014): A generalized endogenous grid method for non-smooth and non-concave problems
     """
     nA = Va.shape[-1]
     vmin = np.inf
@@ -168,7 +172,7 @@ def nonconcave(Va, ilower, iupper):
                 break
             ia -= 1
         ilower_ = ia
-        
+
     # Find iupper
     if vmin == np.inf:
         iupper_ = 0

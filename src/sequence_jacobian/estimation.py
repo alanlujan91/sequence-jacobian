@@ -4,7 +4,7 @@ import numpy as np
 import scipy.linalg as linalg
 from numba import njit
 
-'''Part 1: compute covariances at all lags and log likelihood'''
+"""Part 1: compute covariances at all lags and log likelihood"""
 
 
 def all_covariances(M, sigmas):
@@ -51,16 +51,16 @@ def log_likelihood(Y, Sigma, sigma_measurement=None):
     return log_likelihood_formula(y, V)
 
 
-'''Part 2: helper functions'''
+"""Part 2: helper functions"""
 
 
 def log_likelihood_formula(y, V):
     """Implements multivariate normal log-likelihood formula using Cholesky with data vector y and variance V.
-       Calculates -log det(V)/2 - y'V^(-1)y/2
+    Calculates -log det(V)/2 - y'V^(-1)y/2
     """
     V_factored = linalg.cho_factor(V)
     quadratic_form = np.dot(y, linalg.cho_solve(V_factored, y))
-    log_determinant = 2*np.sum(np.log(np.diag(V_factored[0])))
+    log_determinant = 2 * np.sum(np.log(np.diag(V_factored[0])))
     return -(log_determinant + quadratic_form) / 2
 
 
@@ -73,14 +73,17 @@ def build_full_covariance_matrix(Sigma, sigma_measurement, Tobs):
     V = np.empty((Tobs, O, Tobs, O))
     for t1 in range(Tobs):
         for t2 in range(Tobs):
-            if abs(t1-t2) >= T:
+            if abs(t1 - t2) >= T:
                 V[t1, :, t2, :] = np.zeros((O, O))
             else:
                 if t1 < t2:
-                    V[t1, : , t2, :] = Sigma[t2-t1, :, :]
+                    V[t1, :, t2, :] = Sigma[t2 - t1, :, :]
                 elif t1 > t2:
-                    V[t1, : , t2, :] = Sigma[t1-t2, :, :].T
+                    V[t1, :, t2, :] = Sigma[t1 - t2, :, :].T
                 else:
                     # want exactly symmetric
-                    V[t1, :, t2, :] = (np.diag(sigma_measurement**2) + (Sigma[0, :, :]+Sigma[0, :, :].T)/2)
-    return V.reshape((Tobs*O, Tobs*O))
+                    V[t1, :, t2, :] = (
+                        np.diag(sigma_measurement**2)
+                        + (Sigma[0, :, :] + Sigma[0, :, :].T) / 2
+                    )
+    return V.reshape((Tobs * O, Tobs * O))

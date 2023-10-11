@@ -13,9 +13,29 @@ def test_hank_ss():
     assert np.isclose(UCE, 4.5102870939550055)
 
 
-def hank_ss_singlerun(beta=0.976, r=0.0125, tot_wealth=14, K=10, delta=0.02, Bg=2.8, G=0.2,
-                      eis=0.5, chi0=0.25, chi1=6.5, chi2=2, omega=0.005, nZ=3, nB=50,
-                      nA=70, nK=50, bmax=50, amax=4000, kmax=1, rho_z=0.966, sigma_z=0.92):
+def hank_ss_singlerun(
+    beta=0.976,
+    r=0.0125,
+    tot_wealth=14,
+    K=10,
+    delta=0.02,
+    Bg=2.8,
+    G=0.2,
+    eis=0.5,
+    chi0=0.25,
+    chi1=6.5,
+    chi2=2,
+    omega=0.005,
+    nZ=3,
+    nB=50,
+    nA=70,
+    nK=50,
+    bmax=50,
+    amax=4000,
+    kmax=1,
+    rho_z=0.966,
+    sigma_z=0.92,
+):
     """Mostly cribbed from two_asset.hank_ss(), but just does backward iteration to get
     a partial equilibrium household steady state given parameters, not solving for equilibrium.
     Convenient for testing."""
@@ -33,17 +53,31 @@ def hank_ss_singlerun(beta=0.976, r=0.0125, tot_wealth=14, K=10, delta=0.02, Bg=
     tax = (r * Bg + G) / w
     ra = r
     rb = r - omega
-    z_grid = (1 - tax) * w  * e_grid
+    z_grid = (1 - tax) * w * e_grid
 
     # figure out initializer
-    calibration = {'Pi': Pi, 'a_grid': a_grid, 'b_grid': b_grid, 'e_grid': e_grid,
-                   'z_grid': z_grid, 'k_grid': k_grid, 'beta': beta, 'N': 1.0,
-                   'tax': tax, 'w': w, 'eis': eis, 'rb': rb, 'ra': ra,
-                   'chi0': chi0, 'chi1': chi1, 'chi2': chi2}
+    calibration = {
+        "Pi": Pi,
+        "a_grid": a_grid,
+        "b_grid": b_grid,
+        "e_grid": e_grid,
+        "z_grid": z_grid,
+        "k_grid": k_grid,
+        "beta": beta,
+        "N": 1.0,
+        "tax": tax,
+        "w": w,
+        "eis": eis,
+        "rb": rb,
+        "ra": ra,
+        "chi0": chi0,
+        "chi1": chi1,
+        "chi2": chi2,
+    }
 
     out = hh.hh.steady_state(calibration)
-    
-    return out['A'], out['B'], out['UCE']
+
+    return out["A"], out["B"], out["UCE"]
 
 
 def test_Psi():
@@ -62,16 +96,25 @@ def test_Psi():
     # compare two-sided numerical derivative to our analytical one
     # numerical doesn't work well at kink of "abs" function, so this would fail
     # for some seeds if chi2 was less than 2
-    Psi1 = (Psi_correct(ap+1E-4, a, ra, chi0, chi1, chi2) -
-            Psi_correct(ap-1E-4, a, ra, chi0, chi1, chi2)) / 2E-4
+    Psi1 = (
+        Psi_correct(ap + 1e-4, a, ra, chi0, chi1, chi2)
+        - Psi_correct(ap - 1e-4, a, ra, chi0, chi1, chi2)
+    ) / 2e-4
     assert np.allclose(oPsi1, Psi1)
 
-    Psi2 = (Psi_correct(ap, a+1E-4, ra, chi0, chi1, chi2) -
-            Psi_correct(ap, a-1E-4, ra, chi0, chi1, chi2)) / 2E-4
+    Psi2 = (
+        Psi_correct(ap, a + 1e-4, ra, chi0, chi1, chi2)
+        - Psi_correct(ap, a - 1e-4, ra, chi0, chi1, chi2)
+    ) / 2e-4
     assert np.allclose(oPsi2, Psi2)
 
 
 def Psi_correct(ap, a, ra, chi0, chi1, chi2):
     """Original Psi function that we know is correct, once denominator has power
     chi2-1 rather than 1 (error in original code)"""
-    return chi1 / chi2 * np.abs((ap - (1 + ra) * a)) ** chi2 / ((1 + ra) * a + chi0) ** (chi2 - 1)
+    return (
+        chi1
+        / chi2
+        * np.abs((ap - (1 + ra) * a)) ** chi2
+        / ((1 + ra) * a + chi0) ** (chi2 - 1)
+    )

@@ -33,7 +33,7 @@ def batch_multiply_ith_dimension(P, i, X):
     X = X.reshape((X.shape[0], -1))
 
     # P[i, j, ...] @ X[j, ...]
-    X = np.einsum('ijb,jb->ib', P, X)
+    X = np.einsum("ijb,jb->ib", P, X)
 
     # original shape and order
     X = X.reshape(Pshape[0], *Pshape[2:])

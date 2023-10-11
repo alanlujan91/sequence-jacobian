@@ -1,15 +1,20 @@
 import numpy as np
 
 from sequence_jacobian import simple, solved, combine, create_model, grids, hetblocks
+
 hh = hetblocks.hh_twoasset.hh
 
 
-'''Part 1: Blocks'''
+"""Part 1: Blocks"""
+
 
 @simple
 def pricing(pi, mc, r, Y, kappap, mup):
-    nkpc = kappap * (mc - 1 / mup) + Y(+1) / Y * (1 + pi(+1)).apply(np.log) \
-           / (1 + r(+1)) - (1 + pi).apply(np.log)
+    nkpc = (
+        kappap * (mc - 1 / mup)
+        + Y(+1) / Y * (1 + pi(+1)).apply(np.log) / (1 + r(+1))
+        - (1 + pi).apply(np.log)
+    )
     return nkpc
 
 
@@ -29,9 +34,12 @@ def labor(Y, w, K, Z, alpha):
 @simple
 def investment(Q, K, r, N, mc, Z, delta, epsI, alpha):
     inv = (K / K(-1) - 1) / (delta * epsI) + 1 - Q
-    val = alpha * Z(+1) * (N(+1) / K) ** (1 - alpha) * mc(+1) -\
-        (K(+1) / K - (1 - delta) + (K(+1) / K - 1) ** 2 / (2 * delta * epsI)) +\
-        K(+1) / K * Q(+1) - (1 + r(+1)) * Q
+    val = (
+        alpha * Z(+1) * (N(+1) / K) ** (1 - alpha) * mc(+1)
+        - (K(+1) / K - (1 - delta) + (K(+1) / K - 1) ** 2 / (2 * delta * epsI))
+        + K(+1) / K * Q(+1)
+        - (1 + r(+1)) * Q
+    )
     return inv, val
 
 
@@ -72,8 +80,11 @@ def wage(pi, w):
 
 @simple
 def union(piw, N, tax, w, UCE, kappaw, muw, vphi, frisch, beta):
-    wnkpc = kappaw * (vphi * N ** (1 + 1 / frisch) - (1 - tax) * w * N * UCE / muw) + beta * \
-            (1 + piw(+1)).apply(np.log) - (1 + piw).apply(np.log)
+    wnkpc = (
+        kappaw * (vphi * N ** (1 + 1 / frisch) - (1 - tax) * w * N * UCE / muw)
+        + beta * (1 + piw(+1)).apply(np.log)
+        - (1 + piw).apply(np.log)
+    )
     return wnkpc
 
 
@@ -91,14 +102,17 @@ def share_value(p, tot_wealth, Bh):
     return pshare
 
 
-@solved(unknowns={'pi': (-0.1, 0.1)}, targets=['nkpc'], solver="brentq")
+@solved(unknowns={"pi": (-0.1, 0.1)}, targets=["nkpc"], solver="brentq")
 def pricing_solved(pi, mc, r, Y, kappap, mup):
-    nkpc = kappap * (mc - 1 / mup) + Y(+1) / Y * (1 + pi(+1)).apply(np.log) / \
-           (1 + r(+1)) - (1 + pi).apply(np.log)
+    nkpc = (
+        kappap * (mc - 1 / mup)
+        + Y(+1) / Y * (1 + pi(+1)).apply(np.log) / (1 + r(+1))
+        - (1 + pi).apply(np.log)
+    )
     return nkpc
 
 
-@solved(unknowns={'p': (5, 15)}, targets=['equity'], solver="brentq")
+@solved(unknowns={"p": (5, 15)}, targets=["equity"], solver="brentq")
 def arbitrage_solved(div, p, r):
     equity = div(+1) + p(+1) - p * (1 + r(+1))
     return equity
@@ -132,7 +146,8 @@ def union_ss(tax, w, UCE, N, muw, frisch):
     return vphi, wnkpc
 
 
-'''Part 2: Embed HA block'''
+"""Part 2: Embed HA block"""
+
 
 def make_grids(bmax, amax, kmax, nB, nA, nK, nZ, rho_z, sigma_z):
     b_grid = grids.agrid(amax=bmax, n=nB)
@@ -147,38 +162,89 @@ def income(e_grid, tax, w, N):
     return z_grid
 
 
-'''Part 3: DAG'''
+"""Part 3: DAG"""
+
 
 def dag():
     # Combine Blocks
     household = hh.add_hetinputs([income, make_grids])
     production = combine([labor, investment])
-    production_solved = production.solved(unknowns={'Q': 1., 'K': 10.},
-                                          targets=['inv', 'val'], solver='broyden_custom')
-    blocks = [household, pricing_solved, arbitrage_solved, production_solved,
-              dividend, taylor, fiscal, share_value, finance, wage, union, mkt_clearing]
-    two_asset_model = create_model(blocks, name='Two-Asset HANK')
+    production_solved = production.solved(
+        unknowns={"Q": 1.0, "K": 10.0}, targets=["inv", "val"], solver="broyden_custom"
+    )
+    blocks = [
+        household,
+        pricing_solved,
+        arbitrage_solved,
+        production_solved,
+        dividend,
+        taylor,
+        fiscal,
+        share_value,
+        finance,
+        wage,
+        union,
+        mkt_clearing,
+    ]
+    two_asset_model = create_model(blocks, name="Two-Asset HANK")
 
     # Steadt state DAG
-    blocks_ss = [household, partial_ss,
-                 dividend, taylor, fiscal, share_value, finance, union_ss, mkt_clearing]
-    two_asset_model_ss = create_model(blocks_ss, name='Two-Asset HANK SS')
+    blocks_ss = [
+        household,
+        partial_ss,
+        dividend,
+        taylor,
+        fiscal,
+        share_value,
+        finance,
+        union_ss,
+        mkt_clearing,
+    ]
+    two_asset_model_ss = create_model(blocks_ss, name="Two-Asset HANK SS")
 
     # Steady State
-    calibration = {'Y': 1., 'N': 1.0, 'K': 10., 'r': 0.0125, 'rstar': 0.0125, 'tot_wealth': 14,
-                   'delta': 0.02, 'pi': 0.,
-                   'kappap': 0.1, 'muw': 1.1, 'Bh': 1.04, 'Bg': 2.8, 'G': 0.2, 'eis': 0.5,
-                   'frisch': 1, 'chi0': 0.25, 'chi2': 2, 'epsI': 4, 'omega': 0.005,
-                   'kappaw': 0.1, 'phi': 1.5, 'nZ': 3, 'nB': 10, 'nA': 16, 'nK': 4,
-                   'bmax': 50, 'amax': 4000, 'kmax': 1, 'rho_z': 0.966, 'sigma_z': 0.92}
-    unknowns_ss = {'beta': 0.976, 'chi1': 6.5}
-    targets_ss = {'asset_mkt': 0., 'B': 'Bh'}
-    cali = two_asset_model_ss.solve_steady_state(calibration, unknowns_ss, targets_ss, solver='broyden_custom')
-    ss =  two_asset_model.steady_state(cali)
-    
+    calibration = {
+        "Y": 1.0,
+        "N": 1.0,
+        "K": 10.0,
+        "r": 0.0125,
+        "rstar": 0.0125,
+        "tot_wealth": 14,
+        "delta": 0.02,
+        "pi": 0.0,
+        "kappap": 0.1,
+        "muw": 1.1,
+        "Bh": 1.04,
+        "Bg": 2.8,
+        "G": 0.2,
+        "eis": 0.5,
+        "frisch": 1,
+        "chi0": 0.25,
+        "chi2": 2,
+        "epsI": 4,
+        "omega": 0.005,
+        "kappaw": 0.1,
+        "phi": 1.5,
+        "nZ": 3,
+        "nB": 10,
+        "nA": 16,
+        "nK": 4,
+        "bmax": 50,
+        "amax": 4000,
+        "kmax": 1,
+        "rho_z": 0.966,
+        "sigma_z": 0.92,
+    }
+    unknowns_ss = {"beta": 0.976, "chi1": 6.5}
+    targets_ss = {"asset_mkt": 0.0, "B": "Bh"}
+    cali = two_asset_model_ss.solve_steady_state(
+        calibration, unknowns_ss, targets_ss, solver="broyden_custom"
+    )
+    ss = two_asset_model.steady_state(cali)
+
     # Transitional Dynamics/Jacobian Calculation
-    unknowns = ['r', 'w', 'Y']
-    targets = ['asset_mkt', 'fisher', 'wnkpc']
-    exogenous = ['rstar', 'Z', 'G']
+    unknowns = ["r", "w", "Y"]
+    targets = ["asset_mkt", "fisher", "wnkpc"]
+    exogenous = ["rstar", "Z", "G"]
 
     return two_asset_model_ss, ss, two_asset_model, unknowns, targets, exogenous

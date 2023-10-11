@@ -4,7 +4,9 @@ import numpy as np
 
 from sequence_jacobian import combine
 from sequence_jacobian.examples import rbc
-from sequence_jacobian.blocks.auxiliary_blocks.jacobiandict_block import JacobianDictBlock
+from sequence_jacobian.blocks.auxiliary_blocks.jacobiandict_block import (
+    JacobianDictBlock,
+)
 from sequence_jacobian import SteadyStateDict
 
 

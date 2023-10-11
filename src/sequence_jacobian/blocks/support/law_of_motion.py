@@ -5,14 +5,15 @@ from ...utilities.multidim import batch_multiply_ith_dimension, multiply_ith_dim
 from typing import Optional, Sequence, Any, List, Tuple, Union
 import copy
 
+
 class LawOfMotion:
     """Abstract class representing a matrix that operates on state space.
     Rather than giant Ns*Ns matrix (even if sparse), some other representation
     almost always desirable; such representations are subclasses of this."""
-    
+
     def __matmul__(self, X):
         pass
-    
+
     @property
     def T(self):
         pass
@@ -40,7 +41,7 @@ class PolicyLottery1D(LawOfMotion):
 
         # also store shape of the endogenous grid itself
         self.endog_shape = self.shape[-1:]
-        
+
         self.forward = forward
 
     @property
@@ -51,27 +52,38 @@ class PolicyLottery1D(LawOfMotion):
 
     def __matmul__(self, X):
         if self.forward:
-            return het_compiled.forward_policy_1d(X.reshape(self.flatshape), self.i, self.pi).reshape(self.shape)
+            return het_compiled.forward_policy_1d(
+                X.reshape(self.flatshape), self.i, self.pi
+            ).reshape(self.shape)
         else:
-            return het_compiled.expectation_policy_1d(X.reshape(self.flatshape), self.i, self.pi).reshape(self.shape)
+            return het_compiled.expectation_policy_1d(
+                X.reshape(self.flatshape), self.i, self.pi
+            ).reshape(self.shape)
 
 
 class ShockedPolicyLottery1D(PolicyLottery1D):
     def __matmul__(self, X):
         if self.forward:
-            return het_compiled.forward_policy_shock_1d(X.reshape(self.flatshape), self.i, self.pi).reshape(self.shape)
+            return het_compiled.forward_policy_shock_1d(
+                X.reshape(self.flatshape), self.i, self.pi
+            ).reshape(self.shape)
         else:
             raise NotImplementedError
 
 
 def lottery_2d(a, b, a_grid, b_grid, monotonic=False):
     if not monotonic:
-        return PolicyLottery2D(*interpolate_coord_robust(a_grid, a),
-                           *interpolate_coord_robust(b_grid, b), a_grid, b_grid)
+        return PolicyLottery2D(
+            *interpolate_coord_robust(a_grid, a),
+            *interpolate_coord_robust(b_grid, b),
+            a_grid,
+            b_grid
+        )
     if monotonic:
         # right now we have no monotonic 2D examples, so this shouldn't be called
-        return PolicyLottery2D(*interpolate_coord(a_grid, a),
-                           *interpolate_coord(b_grid, b), a_grid, b_grid)
+        return PolicyLottery2D(
+            *interpolate_coord(a_grid, a), *interpolate_coord(b_grid, b), a_grid, b_grid
+        )
 
 
 class PolicyLottery2D(LawOfMotion):
@@ -102,17 +114,21 @@ class PolicyLottery2D(LawOfMotion):
 
     def __matmul__(self, X):
         if self.forward:
-            return het_compiled.forward_policy_2d(X.reshape(self.flatshape), self.i1, self.i2,
-                                                self.pi1, self.pi2).reshape(self.shape)
+            return het_compiled.forward_policy_2d(
+                X.reshape(self.flatshape), self.i1, self.i2, self.pi1, self.pi2
+            ).reshape(self.shape)
         else:
-            return het_compiled.expectation_policy_2d(X.reshape(self.flatshape), self.i1, self.i2,
-                                                    self.pi1, self.pi2).reshape(self.shape)
+            return het_compiled.expectation_policy_2d(
+                X.reshape(self.flatshape), self.i1, self.i2, self.pi1, self.pi2
+            ).reshape(self.shape)
 
 
 class ShockedPolicyLottery2D(PolicyLottery2D):
     def __matmul__(self, X):
         if self.forward:
-            return het_compiled.forward_policy_shock_2d(X.reshape(self.flatshape), self.i, self.pi).reshape(self.shape)
+            return het_compiled.forward_policy_shock_2d(
+                X.reshape(self.flatshape), self.i, self.pi
+            ).reshape(self.shape)
         else:
             raise NotImplementedError
 
@@ -137,12 +153,12 @@ class Markov(LawOfMotion):
 
 class DiscreteChoice(LawOfMotion):
     def __init__(self, P, i):
-        self.P = P                     # choice prob P(d|...s_i...), 0 for unavailable choices
-        self.i = i                     # dimension of state space that will be updated
+        self.P = P  # choice prob P(d|...s_i...), 0 for unavailable choices
+        self.i = i  # dimension of state space that will be updated
 
         # cache "transposed" version of this, since we'll always need both!
         self.forward = True
-        self.P_T = P.swapaxes(0, 1+self.i).copy()
+        self.P_T = P.swapaxes(0, 1 + self.i).copy()
 
     @property
     def T(self):
@@ -155,4 +171,3 @@ class DiscreteChoice(LawOfMotion):
             return batch_multiply_ith_dimension(self.P, self.i, X)
         else:
             return batch_multiply_ith_dimension(self.P_T, self.i, X)
-    

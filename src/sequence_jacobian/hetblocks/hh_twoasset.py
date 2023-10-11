@@ -6,8 +6,12 @@ from .. import interpolate
 
 
 def hh_init(b_grid, a_grid, z_grid, eis):
-    Va = (0.6 + 1.1 * b_grid[:, np.newaxis] + a_grid) ** (-1 / eis) * np.ones((z_grid.shape[0], 1, 1))
-    Vb = (0.5 + b_grid[:, np.newaxis] + 1.2 * a_grid) ** (-1 / eis) * np.ones((z_grid.shape[0], 1, 1))
+    Va = (0.6 + 1.1 * b_grid[:, np.newaxis] + a_grid) ** (-1 / eis) * np.ones(
+        (z_grid.shape[0], 1, 1)
+    )
+    Vb = (0.5 + b_grid[:, np.newaxis] + 1.2 * a_grid) ** (-1 / eis) * np.ones(
+        (z_grid.shape[0], 1, 1)
+    )
     return Va, Vb
 
 
@@ -18,15 +22,38 @@ def adjustment_costs(a, a_grid, ra, chi0, chi1, chi2):
 
 def marginal_cost_grid(a_grid, ra, chi0, chi1, chi2):
     # precompute Psi1(a', a) on grid of (a', a) for steps 3 and 5
-    Psi1 = get_Psi_and_deriv(a_grid[:, np.newaxis],
-                             a_grid[np.newaxis, :], ra, chi0, chi1, chi2)[1]
+    Psi1 = get_Psi_and_deriv(
+        a_grid[:, np.newaxis], a_grid[np.newaxis, :], ra, chi0, chi1, chi2
+    )[1]
     return Psi1
 
 
 # policy and bacward order as in grid!
-@het(exogenous='Pi', policy=['b', 'a'], backward=['Vb', 'Va'],
-     hetinputs=[marginal_cost_grid], hetoutputs=[adjustment_costs], backward_init=hh_init)  
-def hh(Va_p, Vb_p, a_grid, b_grid, z_grid, e_grid, k_grid, beta, eis, rb, ra, chi0, chi1, chi2, Psi1):
+@het(
+    exogenous="Pi",
+    policy=["b", "a"],
+    backward=["Vb", "Va"],
+    hetinputs=[marginal_cost_grid],
+    hetoutputs=[adjustment_costs],
+    backward_init=hh_init,
+)
+def hh(
+    Va_p,
+    Vb_p,
+    a_grid,
+    b_grid,
+    z_grid,
+    e_grid,
+    k_grid,
+    beta,
+    eis,
+    rb,
+    ra,
+    chi0,
+    chi1,
+    chi2,
+    Psi1,
+):
     # === STEP 2: Wb(z, b', a') and Wa(z, b', a') ===
     # (take discounted expectation of tomorrow's value function)
     Wb = beta * Vb_p
@@ -46,8 +73,12 @@ def hh(Va_p, Vb_p, a_grid, b_grid, z_grid, e_grid, k_grid, beta, eis, rb, ra, ch
     # === STEP 4: b'(z, b, a), a'(z, b, a) for UNCONSTRAINED ===
 
     # solve out budget constraint to get b(z, b', a)
-    b_endo = (c_endo_unc + a_endo_unc + addouter(-z_grid, b_grid, -(1 + ra) * a_grid)
-              + get_Psi_and_deriv(a_endo_unc, a_grid, ra, chi0, chi1, chi2)[0]) / (1 + rb)
+    b_endo = (
+        c_endo_unc
+        + a_endo_unc
+        + addouter(-z_grid, b_grid, -(1 + ra) * a_grid)
+        + get_Psi_and_deriv(a_endo_unc, a_grid, ra, chi0, chi1, chi2)[0]
+    ) / (1 + rb)
 
     # interpolate this b' -> b mapping to get b -> b', so we have b'(z, b, a)
     # and also use interpolation to get a'(z, b, a)
@@ -66,22 +97,27 @@ def hh(Va_p, Vb_p, a_grid, b_grid, z_grid, e_grid, k_grid, beta, eis, rb, ra, ch
 
     # use same interpolation to get Wb and then c
     a_endo_con = interpolate.apply_coord(i, pi, a_grid)
-    c_endo_con = ((1 + k_grid[np.newaxis, :, np.newaxis]) ** (-eis)
-                  * interpolate.apply_coord(i, pi, Wb[:, 0:1, :]) ** (-eis))
+    c_endo_con = (1 + k_grid[np.newaxis, :, np.newaxis]) ** (
+        -eis
+    ) * interpolate.apply_coord(i, pi, Wb[:, 0:1, :]) ** (-eis)
 
     # === STEP 6: a'(z, b, a) for CONSTRAINED ===
 
     # solve out budget constraint to get b(z, kappa, a), enforcing b'=0
-    b_endo = (c_endo_con + a_endo_con
-              + addouter(-z_grid, np.full(len(k_grid), b_grid[0]), -(1 + ra) * a_grid)
-              + get_Psi_and_deriv(a_endo_con, a_grid, ra, chi0, chi1, chi2)[0]) / (1 + rb)
+    b_endo = (
+        c_endo_con
+        + a_endo_con
+        + addouter(-z_grid, np.full(len(k_grid), b_grid[0]), -(1 + ra) * a_grid)
+        + get_Psi_and_deriv(a_endo_con, a_grid, ra, chi0, chi1, chi2)[0]
+    ) / (1 + rb)
 
     # interpolate this kappa -> b mapping to get b -> kappa
     # then use the interpolated kappa to get a', so we have a'(z, b, a)
     # (utils.interpolate.interpolate_y does this in one swoop, but since it works on last
     #  axis, we need to swap kappa to last axis, and then b back to middle when done)
-    a_con = interpolate.interpolate_y(b_endo.swapaxes(1, 2), b_grid,
-                                      a_endo_con.swapaxes(1, 2)).swapaxes(1, 2)
+    a_con = interpolate.interpolate_y(
+        b_endo.swapaxes(1, 2), b_grid, a_endo_con.swapaxes(1, 2)
+    ).swapaxes(1, 2)
 
     # === STEP 7: obtain policy functions and update derivatives of value function ===
 
@@ -106,7 +142,8 @@ def hh(Va_p, Vb_p, a_grid, b_grid, z_grid, e_grid, k_grid, beta, eis, rb, ra, ch
     return Va, Vb, a, b, c, uce
 
 
-'''Supporting functions for HA block'''
+"""Supporting functions for HA block"""
+
 
 def get_Psi_and_deriv(ap, a, ra, chi0, chi1, chi2):
     """Adjustment cost Psi(ap, a) and its derivatives with respect to
@@ -137,7 +174,9 @@ def addouter(z, b, a):
     return z[:, np.newaxis, np.newaxis] + b[:, np.newaxis] + a
 
 
-@guvectorize(['void(float64[:], float64[:,:], uint32[:], float64[:])'], '(ni),(ni,nj)->(nj),(nj)')
+@guvectorize(
+    ["void(float64[:], float64[:,:], uint32[:], float64[:])"], "(ni),(ni,nj)->(nj),(nj)"
+)
 def lhs_equals_rhs_interpolate(lhs, rhs, iout, piout):
     """
     Given lhs (i) and rhs (i,j), for each j, find the i such that
@@ -179,4 +218,3 @@ def lhs_equals_rhs_interpolate(lhs, rhs, iout, piout):
             err_upper = rhs[i, j] - lhs[i]
             err_lower = rhs[i - 1, j] - lhs[i - 1]
             piout[j] = err_upper / (err_upper - err_lower)
-            

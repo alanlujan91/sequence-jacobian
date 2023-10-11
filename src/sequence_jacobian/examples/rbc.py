@@ -1,11 +1,12 @@
 from sequence_jacobian import simple, create_model
 
 
-'''Part 1: Blocks'''
+"""Part 1: Blocks"""
+
 
 @simple
 def firm(K, L, Z, alpha, delta):
-    r = alpha * Z * (K(-1) / L) ** (alpha-1) - delta
+    r = alpha * Z * (K(-1) / L) ** (alpha - 1) - delta
     w = (1 - alpha) * Z * (K(-1) / L) ** alpha
     Y = Z * K(-1) ** alpha * L ** (1 - alpha)
     return r, w, Y
@@ -26,7 +27,8 @@ def mkt_clearing(r, C, Y, I, K, L, w, eis, beta):
     return goods_mkt, euler, walras
 
 
-'''Part 2: Assembling the model'''
+"""Part 2: Assembling the model"""
+
 
 def dag():
     # Combine blocks
@@ -34,14 +36,16 @@ def dag():
     rbc_model = create_model(blocks, name="RBC")
 
     # Steady state
-    calibration = {'eis': 1., 'frisch': 1., 'delta': 0.025, 'alpha': 0.11, 'L': 1.}
-    unknowns_ss = {'vphi': 0.92, 'beta': 1 / (1 + 0.01), 'K': 2., 'Z': 1.}
-    targets_ss = {'goods_mkt': 0., 'r': 0.01, 'euler': 0., 'Y': 1.}
-    ss = rbc_model.solve_steady_state(calibration, unknowns_ss, targets_ss, solver='hybr')
+    calibration = {"eis": 1.0, "frisch": 1.0, "delta": 0.025, "alpha": 0.11, "L": 1.0}
+    unknowns_ss = {"vphi": 0.92, "beta": 1 / (1 + 0.01), "K": 2.0, "Z": 1.0}
+    targets_ss = {"goods_mkt": 0.0, "r": 0.01, "euler": 0.0, "Y": 1.0}
+    ss = rbc_model.solve_steady_state(
+        calibration, unknowns_ss, targets_ss, solver="hybr"
+    )
 
     # Transitional dynamics
-    unknowns = ['K', 'L']
-    targets = ['goods_mkt', 'euler']
-    exogenous = ['Z']
+    unknowns = ["K", "L"]
+    targets = ["goods_mkt", "euler"]
+    exogenous = ["Z"]
 
     return rbc_model, ss, unknowns, targets, exogenous

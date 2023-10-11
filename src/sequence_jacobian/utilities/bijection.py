@@ -1,5 +1,6 @@
 from .ordered_set import OrderedSet
 
+
 class Bijection:
     def __init__(self, map):
         # identity always implicit, remove if there explicitly
@@ -7,10 +8,10 @@ class Bijection:
         invmap = {}
         for k, v in map.items():
             if v in invmap:
-                raise ValueError(f'Duplicate value {v}, for keys {invmap[v]} and {k}')
+                raise ValueError(f"Duplicate value {v}, for keys {invmap[v]} and {k}")
             invmap[v] = k
         self.invmap = invmap
-    
+
     @property
     def inv(self):
         invmap = Bijection.__new__(Bijection)  # better way to do this?
@@ -19,7 +20,7 @@ class Bijection:
         return invmap
 
     def __repr__(self):
-        return f'Bijection({repr(self.map)})'
+        return f"Bijection({repr(self.map)})"
 
     def __getitem__(self, k):
         return self.map.get(k, k)
